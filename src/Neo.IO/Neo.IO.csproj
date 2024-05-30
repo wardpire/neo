@@ -8,7 +8,10 @@
     <PackageTags>NEO;Blockchain;IO</PackageTags>
     <OutputPath>../../bin/$(PackageId)</OutputPath>
   </PropertyGroup>
-
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <GenerateDocumentationFile>False</GenerateDocumentationFile>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Neo" />
     <InternalsVisibleTo Include="Neo.UnitTests" />
