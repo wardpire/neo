@@ -10,4 +10,9 @@
     <ProjectReference Include="..\..\Neo.ConsoleService\Neo.ConsoleService.csproj" />
   </ItemGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <GenerateDocumentationFile>False</GenerateDocumentationFile>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  
 </Project>

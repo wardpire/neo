@@ -5,7 +5,10 @@
     <Nullable>enable</Nullable>
     <PackageTags>NEO;Blockchain;Extensions</PackageTags>
   </PropertyGroup>
-
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <GenerateDocumentationFile>False</GenerateDocumentationFile>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Akka" Version="1.5.18" />
   </ItemGroup>
