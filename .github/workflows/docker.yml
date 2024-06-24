@@ -28,7 +28,7 @@ jobs:
           --configuration Release \
           --runtime linux-x64 \
           --self-contained true \
-          --output ${{ env.DIST_DIR }}/dist \
+          --output ${{ env.DIST_DIR }} \
           --verbosity normal \
           -p:VersionPrefix=${{ env.APP_VERSION }} \
           -p:RuntimeIdentifier=linux-x64 \
@@ -47,16 +47,16 @@ jobs:
           --version-suffix linux-x64 \
           --framework net8.0 \
           --configuration Release \
-          --output ${{ env.DIST_DIR }}/dist/Plugins/LevelDBStore \
+          --output ${{ env.DIST_DIR }}/Plugins/LevelDBStore \
           --verbosity normal \
           -p:VersionPrefix=${{ env.APP_VERSION }}
 
     - name: Remove (junk)
       run: |
-        rm -v ${{ env.DIST_DIR }}/dist/Plugins/LevelDBStore/Neo*
-        rm -v ${{ env.DIST_DIR }}/dist/Plugins/LevelDBStore/*.pdb
-        rm -v ${{ env.DIST_DIR }}/dist/Plugins/LevelDBStore/*.xml
-        rm -v ${{ env.DIST_DIR }}/dist/*.xml
+        rm -v ${{ env.DIST_DIR }}/Plugins/LevelDBStore/Neo*
+        rm -v ${{ env.DIST_DIR }}/Plugins/LevelDBStore/*.pdb
+        rm -v ${{ env.DIST_DIR }}/Plugins/LevelDBStore/*.xml
+        rm -v ${{ env.DIST_DIR }}/*.xml
 
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v3
