@@ -25,7 +25,6 @@ jobs:
     - name: Build (neo-cli)
       run: |
         dotnet publish ./src/Neo.CLI \
-          --version-suffix linux-x64 \
           --framework net8.0 \
           --configuration Release \
           --runtime linux-x64 \
@@ -46,7 +45,6 @@ jobs:
     - name: Build (LevelDbStore)
       run: |
         dotnet build ./src/Plugins/LevelDBStore \
-          --version-suffix linux-x64 \
           --framework net8.0 \
           --configuration Release \
           --output ${{ env.DIST_DIR }}/Plugins/LevelDBStore \
