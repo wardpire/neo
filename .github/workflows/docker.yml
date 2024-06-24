@@ -5,7 +5,7 @@ on:
     types: [published]
 
 env:
-  DIST_DIR: /tmp/dist
+  DIST_DIR: ./dist
 
 jobs:
   neo-cli-build:
@@ -74,9 +74,7 @@ jobs:
     - name: Build and Push
       uses: docker/build-push-action@v6
       with:
-        platforms: linux/amd64
         push: true
-        file: .neo/docker/neo-cli/Dockerfile
         tags: |
           ghcr.io/${{ github.repository_owner }}/neo-cli:latest
           ghcr.io/${{ github.repository_owner }}/neo-cli:${{ env.APP_VERSION }}
