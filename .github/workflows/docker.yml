@@ -65,6 +65,6 @@ jobs:
     - name: Docker Build
       run: |
         docker build . \
-          --tag ghcr.io/${{ github.repository_owner }}/neo-cli:latest
-          --tag ghcr.io/${{ github.repository_owner }}/neo-cli:${{ env.APP_VERSION }}
+          --tag ghcr.io/${{ github.repository_owner }}/neo-cli:latest \
+          --tag ghcr.io/${{ github.repository_owner }}/neo-cli:${{ env.APP_VERSION }} \
           --push
