@@ -5,7 +5,7 @@ on:
     types: [published]
 
 env:
-  DIST_DIR: ./dist
+  DIST_DIR: /tmp/dist
 
 jobs:
   neo-cli-build:
