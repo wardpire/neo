@@ -1,11 +1,13 @@
 name: Publish (docker-image)
 
 on:
+  push:
+
   release:
     types: [published]
 
 env:
-  DIST_DIR: ./out
+  DIST_DIR: ./dist
 
 jobs:
   neo-cli-build:
@@ -58,17 +60,15 @@ jobs:
         rm -v ${{ env.DIST_DIR }}/Plugins/LevelDBStore/*.xml
         rm -v ${{ env.DIST_DIR }}/*.xml
 
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Docker Login
+      run: |
+        docker login ghcr.io \
+          --username ${{ github.repository_owner }} \
+          --passsword ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build and Push
-      uses: docker/build-push-action@v6
-      with:
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository_owner }}/neo-cli:latest
-          ghcr.io/${{ github.repository_owner }}/neo-cli:${{ env.APP_VERSION }}
+    - name: Docker Build
+      run: |
+        docker build . \
+          --tag ghcr.io/${{ github.repository_owner }}/neo-cli:latest
+          --tag ghcr.io/${{ github.repository_owner }}/neo-cli:${{ env.APP_VERSION }}
+          --push
