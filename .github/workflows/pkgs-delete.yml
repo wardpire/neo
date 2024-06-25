@@ -110,6 +110,7 @@ jobs:
         min-versions-to-keep: 3
         delete-only-pre-release-versions: "true"
         token: "${{ secrets.GITHUB_TOKEN }}"
+
     - name: Delete Neo.ConsoleService Package
       uses: actions/delete-package-versions@v4
       with:
@@ -118,6 +119,7 @@ jobs:
         min-versions-to-keep: 3
         delete-only-pre-release-versions: "true"
         token: "${{ secrets.GITHUB_TOKEN }}"
+
     - name: Delete Neo.Extensions Package
       uses: actions/delete-package-versions@v4
       with:
