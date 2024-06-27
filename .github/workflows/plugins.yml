@@ -53,9 +53,9 @@ jobs:
         cp -vp ./bin/Neo.Consensus.DBFT/${{ env.FRAMEWORK_DIR }}/DBFTPlugin* ${{ env.DIST_DIR }}/Neo.Consensus.DBFT
         zip ${{ env.DIST_DIR }}/DBFTPlugin.zip -r ${{ env.DIST_DIR }}/Neo.Consensus.DBFT/*
 
-        mkdir -vp ${{ env.DIST_DIR }}/Neo.Plugins.LevelDBStore
-        cp -vp ./bin/Neo.Plugins.LevelDBStore/${{ env.FRAMEWORK_DIR }}/LevelDBStore* ${{ env.DIST_DIR }}/Neo.Plugins.LevelDBStore
-        zip ${{ env.DIST_DIR }}/LevelDBStore.zip -r ${{ env.DIST_DIR }}/Neo.Plugins.LevelDBStore/*
+        mkdir -vp ${{ env.DIST_DIR }}/Neo.Plugins.Storage.LevelDBStore
+        cp -vp ./bin/Neo.Plugins.Storage.LevelDBStore/${{ env.FRAMEWORK_DIR }}/LevelDBStore* ${{ env.DIST_DIR }}/Neo.Plugins.Storage.LevelDBStore
+        zip ${{ env.DIST_DIR }}/LevelDBStore.zip -r ${{ env.DIST_DIR }}/Neo.Plugins.Storage.LevelDBStore/*
 
         mkdir -vp ${{ env.DIST_DIR }}/Neo.Cryptography.MPT
         cp -vp ./bin/Neo.Cryptography.MPT/${{ env.FRAMEWORK_DIR }}/MPTTrie* ${{ env.DIST_DIR }}/Neo.Cryptography.MPT
@@ -65,9 +65,9 @@ jobs:
         cp -vp ./bin/Neo.Plugins.OracleService/${{ env.FRAMEWORK_DIR }}/OracleService* ${{ env.DIST_DIR }}/Neo.Plugins.OracleService
         zip ${{ env.DIST_DIR }}/OracleService.zip -r ${{ env.DIST_DIR }}/Neo.Plugins.OracleService/*
 
-        mkdir -vp ${{ env.DIST_DIR }}/Neo.Plugins.RocksDBStore
-        cp -vp ./bin/Neo.Plugins.RocksDBStore/${{ env.FRAMEWORK_DIR }}/RocksDBStore* ${{ env.DIST_DIR }}/Neo.Plugins.RocksDBStore
-        zip ${{ env.DIST_DIR }}/RocksDBStore.zip -r ${{ env.DIST_DIR }}/Neo.Plugins.RocksDBStore/*
+        mkdir -vp ${{ env.DIST_DIR }}/Neo.Plugins.Storage.RocksDBStore
+        cp -vp ./bin/Neo.Plugins.Storage.RocksDBStore/${{ env.FRAMEWORK_DIR }}/RocksDBStore* ${{ env.DIST_DIR }}/Neo.Plugins.Storage.RocksDBStore
+        zip ${{ env.DIST_DIR }}/RocksDBStore.zip -r ${{ env.DIST_DIR }}/Neo.Plugins.Storage.RocksDBStore/*
 
         mkdir -vp ${{ env.DIST_DIR }}/Neo.Network.RPC.RpcClient
         cp -vp ./bin/Neo.Network.RPC.RpcClient/${{ env.FRAMEWORK_DIR }}/RpcClient* ${{ env.DIST_DIR }}/Neo.Network.RPC.RpcClient
