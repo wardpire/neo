@@ -61,7 +61,7 @@ jobs:
         zip ${{ env.DIST_DIR }}/LevelDBStore.zip -r *
 
         mkdir -vp ${{ env.DIST_DIR }}/Neo.Cryptography.MPT
-        cp -vp ./bin/Neo.Cryptography.MPT/${{ env.FRAMEWORK_DIR }}/MPTTrie* ${{ env.DIST_DIR }}/Neo.Cryptography.MPT
+        cp -vp ${{ github.workspace }}/bin/Neo.Cryptography.MPT/${{ env.FRAMEWORK_DIR }}/MPTTrie* ${{ env.DIST_DIR }}/Neo.Cryptography.MPT
         cd ${{ env.DIST_DIR }}/Neo.Cryptography.MPT
         zip ${{ env.DIST_DIR }}/MPTTrie.zip -r *
 
