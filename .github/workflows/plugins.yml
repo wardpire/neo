@@ -1,4 +1,4 @@
-name: Release (nuget)
+name: Release (plugins)
 
 # Trigger the workflow on a release event when a new release is published
 on:
@@ -35,7 +35,7 @@ jobs:
     - name: Build (Plugins)
       run: |
         dotnet build ./neo.sln \
-        --configuration ${{ env.CONFIGURATION }}
+        --configuration ${{ env.CONFIGURATION }} \
         --verbosity normal \
         -p:VersionPrefix=${{ env.APP_VERSION }}
 
