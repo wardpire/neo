@@ -168,6 +168,25 @@ namespace Neo
             return Custom;
         }
 
+        public static ProtocolSettings Load(ProtocolSettingsOptions options)
+        {
+            Custom = new ProtocolSettings
+            {
+                Network = options.Network,
+                AddressVersion = options.AddressVersion,
+                StandbyCommittee = (options.StandbyCommittee.Count > 0) ? options.StandbyCommittee.Select(p => ECPoint.Parse(p, ECCurve.Secp256r1)).ToArray() : Default.StandbyCommittee,
+                ValidatorsCount = options.ValidatorsCount,
+                SeedList = options.SeedList,
+                MillisecondsPerBlock = options.MillisecondsPerBlock,
+                MaxTransactionsPerBlock = options.MaxTransactionsPerBlock,
+                MemoryPoolMaxTransactions = options.MemoryPoolMaxTransactions,
+                MaxTraceableBlocks = options.MaxTraceableBlocks,
+                InitialGasDistribution = options.InitialGasDistribution,
+                Hardforks = ((options.Hardforks?.Count ?? 0) > 0) ? EnsureOmmitedHardforks(options.Hardforks!.ToDictionary(p => Enum.Parse<Hardfork>(p.Key, true), p => p.Value)).ToImmutableDictionary() : Default.Hardforks
+            };
+            return Custom;
+        }
+
         /// <summary>
         /// Explicitly set the height of all old omitted hardforks to 0 for proper IsHardforkEnabled behaviour.
         /// </summary>
