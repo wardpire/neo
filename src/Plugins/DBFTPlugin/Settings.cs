@@ -15,12 +15,16 @@ namespace Neo.Consensus
 {
     public class Settings
     {
-        public string RecoveryLogs { get; }
-        public bool IgnoreRecoveryLogs { get; }
-        public bool AutoStart { get; }
-        public uint Network { get; }
-        public uint MaxBlockSize { get; }
-        public long MaxBlockSystemFee { get; }
+        public string RecoveryLogs { get; set; } = "ConsensusState";
+        public bool IgnoreRecoveryLogs { get; set; } = false;
+        public bool AutoStart { get; set; } = false;
+        public uint Network { get; set; } = 5195086u;
+        public uint MaxBlockSize { get; set; } = 262144u;
+        public long MaxBlockSystemFee { get; set; } = 150000000000L;
+
+        public Settings()
+        {
+        }
 
         public Settings(IConfigurationSection section)
         {
