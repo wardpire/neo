@@ -58,6 +58,18 @@ namespace Neo.Plugins
         public virtual Version Version => GetType().Assembly.GetName().Version;
 
         /// <summary>
+        /// If the plugin should be stopped when an exception is thrown.
+        /// Default is StopNode.
+        /// </summary>
+        protected internal virtual UnhandledExceptionPolicy ExceptionPolicy { get; init; } = UnhandledExceptionPolicy.StopNode;
+
+        /// <summary>
+        /// The plugin will be stopped if an exception is thrown.
+        /// But it also depends on <see cref="UnhandledExceptionPolicy"/>.
+        /// </summary>
+        internal bool IsStopped { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Plugin"/> class.
         /// </summary>
         protected Plugin()

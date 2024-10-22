@@ -22,7 +22,7 @@ namespace Neo.Plugins.DBFTPlugin
         public uint MaxBlockSize { get; set; } = 262144u;
         public long MaxBlockSystemFee { get; set; } = 150000000000L;
 
-        public Settings()
+        public Settings() : base(UnhandledExceptionPolicy.Ignore)
         {
         }
 

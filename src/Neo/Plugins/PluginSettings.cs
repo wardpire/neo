@@ -15,19 +15,23 @@ using System;
 
 namespace Neo.Plugins;
 
-public abstract class PluginSettings(IConfigurationSection section)
+public abstract class PluginSettings
 {
-    public UnhandledExceptionPolicy ExceptionPolicy
-    {
-        get
-        {
-            var policyString = section.GetValue(nameof(UnhandledExceptionPolicy), nameof(UnhandledExceptionPolicy.StopNode));
-            if (Enum.TryParse(policyString, true, out UnhandledExceptionPolicy policy))
-            {
-                return policy;
-            }
+    private readonly UnhandledExceptionPolicy _unhandledExceptionPolicy;
 
+    protected PluginSettings(UnhandledExceptionPolicy unhandledExceptionPolicy)
+    {
+        _unhandledExceptionPolicy = unhandledExceptionPolicy;
+    }
+
+    protected PluginSettings(IConfigurationSection section)
+    {
+        var policyString = section?.GetValue(nameof(UnhandledExceptionPolicy), nameof(UnhandledExceptionPolicy.StopNode));
+        if (!Enum.TryParse(policyString, true, out UnhandledExceptionPolicy _unhandledExceptionPolicy))
+        {
             throw new InvalidParameterException($"{policyString} is not a valid UnhandledExceptionPolicy");
         }
     }
+
+    public UnhandledExceptionPolicy ExceptionPolicy => _unhandledExceptionPolicy;
 }

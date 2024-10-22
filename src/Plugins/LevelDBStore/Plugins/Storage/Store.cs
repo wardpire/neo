@@ -89,8 +89,8 @@ namespace Neo.Plugins.Storage
 
         public bool TryGet(byte[] key, out byte[] value)
         {
-            value = db.Get(ReadOptions.Default, key);
-            return value != null;
+            value = db.Get(key);
+            return value != null && value.Length > 0;
         }
     }
 }
