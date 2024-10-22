@@ -9,7 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.IO.Data.LevelDB;
+using LevelDB;
 using Neo.Persistence;
 using System;
 using System.Linq;
@@ -22,13 +22,12 @@ namespace Neo.Plugins.Storage
 
         public LevelDBStore()
         {
-            StoreFactory.RegisterProvider(this);
         }
 
         public IStore GetStore(string path)
         {
             if (Environment.CommandLine.Split(' ').Any(p => p == "/repair" || p == "--repair"))
-                DB.Repair(path, Options.Default);
+                DB.Repair(new Options(), path);
             return new Store(path);
         }
     }

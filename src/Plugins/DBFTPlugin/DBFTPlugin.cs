@@ -33,7 +33,7 @@ namespace Neo.Consensus
             RemoteNode.MessageReceived += RemoteNode_MessageReceived;
         }
 
-        public DBFTPlugin(Settings settings) : this()
+        public DBFTPlugin(Settings settings)
         {
             this.settings = settings;
         }
