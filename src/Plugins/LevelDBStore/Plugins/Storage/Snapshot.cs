@@ -9,61 +9,79 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.IO.Data.LevelDB;
+using LevelDB;
 using Neo.Persistence;
+using System;
 using System.Collections.Generic;
-using LSnapshot = Neo.IO.Data.LevelDB.Snapshot;
 
 namespace Neo.Plugins.Storage
 {
     internal class Snapshot : ISnapshot
     {
-        private readonly DB db;
-        private readonly LSnapshot snapshot;
-        private readonly ReadOptions options;
-        private readonly WriteBatch batch;
+        private readonly LevelDB.DB _db;
+        private readonly SnapShot _snapShot;
+        private readonly LevelDB.WriteBatch _batch;
 
-        public Snapshot(DB db)
+        public Snapshot(LevelDB.DB db)
         {
-            this.db = db;
-            snapshot = db.GetSnapshot();
-            options = new ReadOptions { FillCache = false, Snapshot = snapshot };
-            batch = new WriteBatch();
+            _db = db;
+            _snapShot = _db.CreateSnapshot();
+            _batch = new LevelDB.WriteBatch();
         }
 
         public void Commit()
         {
-            db.Write(WriteOptions.Default, batch);
+            _db.Write(_batch);
+            _batch.Clear();
         }
 
         public void Delete(byte[] key)
         {
-            batch.Delete(key);
+            _batch.Delete(key);
         }
 
         public void Dispose()
         {
-            snapshot.Dispose();
+            _snapShot.Dispose();
+            _batch.Dispose();
         }
 
         public IEnumerable<(byte[] Key, byte[] Value)> Seek(byte[] prefix, SeekDirection direction = SeekDirection.Forward)
         {
-            return db.Seek(options, prefix, direction, (k, v) => (k, v));
+            var it = _db.CreateIterator(new LevelDB.ReadOptions() { Snapshot = _snapShot });
+            if (direction == SeekDirection.Forward)
+            {
+                for (it.Seek(prefix); it.IsValid(); it.Next())
+                    yield return (it.Key(), it.Value());
+            }
+            else
+            {
+                // SeekForPrev
+                it.Seek(prefix);
+                if (!it.IsValid())
+                    it.SeekToLast();
+                else if (it.Key().AsSpan().SequenceCompareTo(prefix) > 0)
+                    it.Prev();
+
+                for (; it.IsValid(); it.Prev())
+                    yield return (it.Key(), it.Value());
+            }
         }
 
         public void Put(byte[] key, byte[] value)
         {
-            batch.Put(key, value);
+            _batch.Put(key, value);
         }
 
         public bool Contains(byte[] key)
         {
-            return db.Contains(options, key);
+            var val = TryGet(key);
+            return val != null && val.Length > 0;
         }
 
         public byte[] TryGet(byte[] key)
         {
-            return db.Get(options, key);
+            return _db.Get(key, new LevelDB.ReadOptions() { Snapshot = _snapShot });
         }
 
         public bool TryGet(byte[] key, out byte[] value)

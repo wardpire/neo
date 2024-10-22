@@ -9,8 +9,12 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.IO.Data.LevelDB;
+//using Neo.IO.Data.LevelDB;
+using Akka.Util;
+using LevelDB;
+using LevelDB.NativePointer;
 using Neo.Persistence;
+using System;
 using System.Collections.Generic;
 
 namespace Neo.Plugins.Storage
@@ -21,12 +25,13 @@ namespace Neo.Plugins.Storage
 
         public Store(string path)
         {
-            db = DB.Open(path, new Options { CreateIfMissing = true, FilterPolicy = Native.leveldb_filterpolicy_create_bloom(15) });
+            var options = new Options { CreateIfMissing = true };
+            db = new DB(options, path);
         }
 
         public void Delete(byte[] key)
         {
-            db.Delete(WriteOptions.Default, key);
+            db.Delete(key);
         }
 
         public void Dispose()
@@ -36,7 +41,24 @@ namespace Neo.Plugins.Storage
 
         public IEnumerable<(byte[], byte[])> Seek(byte[] prefix, SeekDirection direction = SeekDirection.Forward)
         {
-            return db.Seek(ReadOptions.Default, prefix, direction, (k, v) => (k, v));
+            var it = db.CreateIterator(new ReadOptions());
+            if (direction == SeekDirection.Forward)
+            {
+                for (it.Seek(prefix); it.IsValid(); it.Next())
+                    yield return (it.Key(), it.Value());
+            }
+            else
+            {
+                // SeekForPrev
+                it.Seek(prefix);
+                if (!it.IsValid())
+                    it.SeekToLast();
+                else if (it.Key().AsSpan().SequenceCompareTo(prefix) > 0)
+                    it.Prev();
+
+                for (; it.IsValid(); it.Prev())
+                    yield return (it.Key(), it.Value());
+            }
         }
 
         public ISnapshot GetSnapshot()
@@ -46,22 +68,23 @@ namespace Neo.Plugins.Storage
 
         public void Put(byte[] key, byte[] value)
         {
-            db.Put(WriteOptions.Default, key, value);
+            db.Put(key, value);
         }
 
         public void PutSync(byte[] key, byte[] value)
         {
-            db.Put(WriteOptions.SyncWrite, key, value);
+            db.Put(key, value);
         }
 
         public bool Contains(byte[] key)
         {
-            return db.Contains(ReadOptions.Default, key);
+            var val = db.Get(key);
+            return val != null && val.Length > 0;
         }
 
         public byte[] TryGet(byte[] key)
         {
-            return db.Get(ReadOptions.Default, key);
+            return db.Get(key);
         }
 
         public bool TryGet(byte[] key, out byte[] value)

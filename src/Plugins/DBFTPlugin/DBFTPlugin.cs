@@ -38,7 +38,7 @@ namespace Neo.Plugins.DBFTPlugin
             RemoteNode.MessageReceived += ((IMessageReceivedHandler)this).RemoteNode_MessageReceived_Handler;
         }
 
-        public DBFTPlugin(Settings settings) : this()
+        public DBFTPlugin(Settings settings)
         {
             this.settings = settings;
         }

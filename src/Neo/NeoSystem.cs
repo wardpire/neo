@@ -24,6 +24,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Net.Security;
 using System.Threading;
 
 namespace Neo
@@ -103,13 +104,7 @@ namespace Neo
         private ChannelsConfig start_message = null;
         private int suspend = 0;
 
-        static NeoSystem()
-        {
-            // Unify unhandled exceptions
-            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-
-            Plugin.LoadPlugins();
-        }
+        private PluginRepository pluginRepository;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NeoSystem"/> class.
@@ -117,9 +112,15 @@ namespace Neo
         /// <param name="settings">The protocol settings of the <see cref="NeoSystem"/>.</param>
         /// <param name="storageProvider">The storage engine used to create the <see cref="IStoreProvider"/> objects. If this parameter is <see langword="null"/>, a default in-memory storage engine will be used.</param>
         /// <param name="storagePath">The path of the storage. If <paramref name="storageProvider"/> is the default in-memory storage engine, this parameter is ignored.</param>
-        public NeoSystem(ProtocolSettings settings, string storageProvider = null, string storagePath = null) :
-            this(settings, StoreFactory.GetStoreProvider(storageProvider ?? nameof(MemoryStore))
-                ?? throw new ArgumentException($"Can't find the storage provider {storageProvider}", nameof(storageProvider)), storagePath)
+        public NeoSystem(
+            ProtocolSettings settings,
+            PluginRepository pluginRepository,
+            string? storageProvider = null,
+            string? storagePath = null) : this(
+                settings,
+                pluginRepository,
+                pluginRepository.GetStoreProvider(storageProvider ?? nameof(MemoryStore)) ?? throw new ArgumentException($"Can't find the storage provider {storageProvider}", nameof(storageProvider)),
+                storagePath)
         {
         }
 
@@ -129,18 +130,24 @@ namespace Neo
         /// <param name="settings">The protocol settings of the <see cref="NeoSystem"/>.</param>
         /// <param name="storageProvider">The <see cref="IStoreProvider"/> to use.</param>
         /// <param name="storagePath">The path of the storage. If <paramref name="storageProvider"/> is the default in-memory storage engine, this parameter is ignored.</param>
-        public NeoSystem(ProtocolSettings settings, IStoreProvider storageProvider, string storagePath = null)
+        public NeoSystem(
+            ProtocolSettings settings,
+            PluginRepository pluginRepository,
+            IStoreProvider storageProvider,
+            string? storagePath = null)
         {
             Settings = settings;
             GenesisBlock = CreateGenesisBlock(settings);
             this.storageProvider = storageProvider;
+            this.pluginRepository = pluginRepository;
             store = storageProvider.GetStore(storagePath);
             MemPool = new MemoryPool(this);
             Blockchain = ActorSystem.ActorOf(Ledger.Blockchain.Props(this));
             LocalNode = ActorSystem.ActorOf(Network.P2P.LocalNode.Props(this));
             TaskManager = ActorSystem.ActorOf(Network.P2P.TaskManager.Props(this));
             TxRouter = ActorSystem.ActorOf(TransactionRouter.Props(this));
-            foreach (var plugin in Plugin.Plugins)
+            pluginRepository.LoadPlugins();
+            foreach (var plugin in pluginRepository.Plugins)
                 plugin.OnSystemLoaded(this);
             Blockchain.Ask(new Blockchain.Initialize()).Wait();
         }
@@ -170,16 +177,11 @@ namespace Neo
             Transactions = Array.Empty<Transaction>()
         };
 
-        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
-        {
-            Utility.Log("UnhandledException", LogLevel.Fatal, e.ExceptionObject);
-        }
-
         public void Dispose()
         {
             EnsureStopped(LocalNode);
             EnsureStopped(Blockchain);
-            foreach (var p in Plugin.Plugins)
+            foreach (var p in pluginRepository.Plugins)
                 p.Dispose();
             // Dispose will call ActorSystem.Terminate()
             ActorSystem.Dispose();
