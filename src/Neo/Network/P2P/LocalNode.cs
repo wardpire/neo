@@ -74,9 +74,11 @@ namespace Neo.Network.P2P
         /// </summary>
         public string UserAgent { get; set; }
 
+        private static Random rand;
+
         static LocalNode()
         {
-            Random rand = new();
+            rand ??= new();
         }
 
         /// <summary>
@@ -87,7 +89,7 @@ namespace Neo.Network.P2P
         {
             this.system = system;
 
-            Nonce = (uint)Random.Shared.Next();
+            Nonce = (uint)rand.Next();
             UserAgent = $"/{Assembly.GetExecutingAssembly().GetName().Name}:{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)}/";
 
             SeedList = new IPEndPoint[system.Settings.SeedList.Length];

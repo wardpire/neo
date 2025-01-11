@@ -1,3 +1,15 @@
+## This is an unofficial fork of the repository
+
+### Changes from original repository:
+ - Reduced usage of static properties
+    - Multiple instances was successfully run inside single process, so automatic testing of cluster is easier
+ - `LevelDB.Standard` nuget was used as `levelDB` dependency (IMHO easier handling of native DLLs)
+ - Protocol options can be binded from .net configuration (and thus from appsetings.json) more easily
+ - Plug-ins can be configured at runtime - it is not mandatory to load plug-ins by scanning special folder with DLLs
+
+
+ <br />
+
 <p align="center">
   <a href="https://neo.org/">
       <img
@@ -107,7 +119,6 @@
 This repository contain main classes of the 
 [Neo](https://neo.org) blockchain.   
 Visit the [tutorials](https://docs.neo.org) to get started.
-
 
 ## Project structure
 An overview of the project folders can be seen below.
