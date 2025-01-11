@@ -19,9 +19,13 @@ using System.Collections.Generic;
 
 namespace Neo.Plugins.Storage
 {
-    internal class Store : IStore
+    /// <summary>
+    /// <code>Iterating over the whole dataset can be time-consuming. Depending upon how large the dataset is.</code>
+    /// </summary>
+    internal class Store : IStore, IEnumerable<KeyValuePair<byte[], byte[]>>
     {
-        private readonly DB db;
+        private readonly DB _db;
+        private readonly Options _options;
 
         public Store(string path)
         {
@@ -36,7 +40,8 @@ namespace Neo.Plugins.Storage
 
         public void Dispose()
         {
-            db.Dispose();
+            _db.Dispose();
+            _options.Dispose();
         }
 
         public IEnumerable<(byte[], byte[])> Seek(byte[] prefix, SeekDirection direction = SeekDirection.Forward)

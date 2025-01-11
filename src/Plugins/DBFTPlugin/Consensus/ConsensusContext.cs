@@ -11,6 +11,7 @@
 
 using Neo.Cryptography;
 using Neo.Cryptography.ECC;
+using Neo.Extensions;
 using Neo.IO;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
@@ -170,8 +171,9 @@ namespace Neo.Plugins.DBFTPlugin.Consensus
 
         public bool Load()
         {
-            byte[] data = store?.TryGet(ConsensusStateKey);
-            if (data is null || data.Length == 0) return false;
+            if (store is null || !store.TryGet(ConsensusStateKey, out var data) || data.Length == 0)
+                return false;
+
             MemoryReader reader = new(data);
             try
             {

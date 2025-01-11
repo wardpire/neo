@@ -16,7 +16,10 @@ using System.Collections.Generic;
 
 namespace Neo.Plugins.Storage
 {
-    internal class Snapshot : ISnapshot
+    /// <summary>
+    /// <code>Iterating over the whole dataset can be time-consuming. Depending upon how large the dataset is.</code>
+    /// </summary>
+    internal class Snapshot : ISnapshot, IEnumerable<KeyValuePair<byte[], byte[]>>
     {
         private readonly LevelDB.DB _db;
         private readonly SnapShot _snapShot;
@@ -46,7 +49,8 @@ namespace Neo.Plugins.Storage
             _batch.Dispose();
         }
 
-        public IEnumerable<(byte[] Key, byte[] Value)> Seek(byte[] prefix, SeekDirection direction = SeekDirection.Forward)
+        /// <inheritdoc/>
+        public IEnumerable<(byte[] Key, byte[] Value)> Seek(byte[] keyOrPrefix, SeekDirection direction = SeekDirection.Forward)
         {
             var it = _db.CreateIterator(new LevelDB.ReadOptions() { Snapshot = _snapShot });
             if (direction == SeekDirection.Forward)
@@ -89,5 +93,15 @@ namespace Neo.Plugins.Storage
             value = _db.Get(key, new ReadOptions() { Snapshot = _snapShot });
             return value != null;
         }
+
+        public IEnumerator<KeyValuePair<byte[], byte[]>> GetEnumerator()
+        {
+            using var iterator = _db.CreateIterator(_readOptions);
+            for (iterator.SeekToFirst(); iterator.Valid(); iterator.Next())
+                yield return new KeyValuePair<byte[], byte[]>(iterator.Key(), iterator.Value());
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() =>
+            GetEnumerator();
     }
 }

@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.Extensions;
 using Neo.IO;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -46,6 +47,7 @@ namespace Neo.Persistence
             _innerData[key[..]] = value[..];
         }
 
+        /// <inheritdoc/>
         public IEnumerable<(byte[] Key, byte[] Value)> Seek(byte[] keyOrPrefix, SeekDirection direction = SeekDirection.Forward)
         {
             if (direction == SeekDirection.Backward && keyOrPrefix?.Length == 0) yield break;

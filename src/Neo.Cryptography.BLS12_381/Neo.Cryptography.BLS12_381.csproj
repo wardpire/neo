@@ -2,14 +2,19 @@
 
   <PropertyGroup>
     <VersionPrefix>0.3.0</VersionPrefix>
-    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.1;net9.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>Neo.Cryptography.BLS12_381</PackageId>
     <OutputPath>../../bin/$(PackageId)</OutputPath>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <GenerateDocumentationFile>False</GenerateDocumentationFile>
-    <DebugType>none</DebugType>
-  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Neo.Extensions\Neo.Extensions.csproj" />
+  </ItemGroup>
+
 </Project>
