@@ -21,6 +21,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
@@ -176,9 +177,9 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="pluginName"> Name of the plugin</param>
         /// <returns></returns>
-        private static bool PluginExists(string pluginName)
+        private bool PluginExists(string pluginName)
         {
-            return Plugin.Plugins.Any(p => p.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase));
+            return PluginRepository.Plugins.Any(p => p.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase));
         }
 
         /// <summary>
@@ -194,7 +195,7 @@ namespace Neo.CLI
                 return;
             }
 
-            foreach (var p in Plugin.Plugins)
+            foreach (var p in PluginRepository.Plugins)
             {
                 try
                 {
@@ -234,7 +235,7 @@ namespace Neo.CLI
             try
             {
                 var plugins = GetPluginListAsync().GetAwaiter().GetResult()?.ToArray() ?? [];
-                var installedPlugins = Plugin.Plugins.ToList();
+                var installedPlugins = PluginRepository.Plugins.ToList();
 
                 var maxLength = installedPlugins.Count == 0 ? 0 : installedPlugins.Max(s => s.Name.Length);
                 if (plugins.Length > 0)
@@ -242,7 +243,7 @@ namespace Neo.CLI
                     maxLength = Math.Max(maxLength, plugins.Max(s => s.Length));
                 }
 
-                plugins.Select(s => (name: s, installedPlugin: Plugin.Plugins.SingleOrDefault(pp => string.Equals(pp.Name, s, StringComparison.InvariantCultureIgnoreCase))))
+                plugins.Select(s => (name: s, installedPlugin: PluginRepository.Plugins.SingleOrDefault(pp => string.Equals(pp.Name, s, StringComparison.InvariantCultureIgnoreCase))))
                     .Concat(installedPlugins.Select(u => (name: u.Name, installedPlugin: (Plugin?)u)).Where(u => !plugins.Contains(u.name, StringComparer.InvariantCultureIgnoreCase)))
                     .OrderBy(u => u.name)
                     .ForEach((f) =>

@@ -65,6 +65,7 @@ namespace Neo.CLI
             get => _neoSystem!;
             private set => _neoSystem = value;
         }
+        public PluginRepository PluginRepository { get; private set; }
 
         private LocalNode? _localNode;
 
@@ -378,7 +379,9 @@ namespace Neo.CLI
             CustomApplicationSettings(options, Settings.Default);
             try
             {
-                NeoSystem = new NeoSystem(protocol, Settings.Default.Storage.Engine,
+                PluginRepository = new PluginRepository();
+                PluginRepository.FindAndLoadPlugins();
+                NeoSystem = new NeoSystem(protocol,PluginRepository, Settings.Default.Storage.Engine,
                     string.Format(Settings.Default.Storage.Path, protocol.Network.ToString("X8")));
             }
             catch (DllNotFoundException ex) when (ex.Message.Contains("libleveldb"))
@@ -430,7 +433,7 @@ namespace Neo.CLI
             {
                 await Task.WhenAll(installTasks);
             }
-            foreach (var plugin in Plugin.Plugins)
+            foreach (var plugin in PluginRepository.Plugins)
             {
                 // Register plugins commands
 

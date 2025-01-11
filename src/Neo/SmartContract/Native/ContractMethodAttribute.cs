@@ -16,7 +16,7 @@ namespace Neo.SmartContract.Native
 {
     [DebuggerDisplay("{Name}")]
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property, AllowMultiple = false)]
-    internal class ContractMethodAttribute : Attribute, IHardforkActivable
+    public class ContractMethodAttribute : Attribute, IHardforkActivable
     {
         public string Name { get; init; }
         public CallFlags RequiredCallFlags { get; init; }

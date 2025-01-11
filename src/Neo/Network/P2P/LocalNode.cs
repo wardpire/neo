@@ -67,18 +67,16 @@ namespace Neo.Network.P2P
         /// <summary>
         /// The random number used to identify the local node.
         /// </summary>
-        public static readonly uint Nonce;
+        public readonly uint Nonce;
 
         /// <summary>
         /// The identifier of the client software of the local node.
         /// </summary>
-        public static string UserAgent { get; set; }
+        public string UserAgent { get; set; }
 
         static LocalNode()
         {
             Random rand = new();
-            Nonce = (uint)rand.Next();
-            UserAgent = $"/{Assembly.GetExecutingAssembly().GetName().Name}:{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)}/";
         }
 
         /// <summary>
@@ -88,6 +86,10 @@ namespace Neo.Network.P2P
         public LocalNode(NeoSystem system)
         {
             this.system = system;
+
+            Nonce = (uint)Random.Shared.Next();
+            UserAgent = $"/{Assembly.GetExecutingAssembly().GetName().Name}:{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)}/";
+
             SeedList = new IPEndPoint[system.Settings.SeedList.Length];
 
             // Start dns resolution in parallel

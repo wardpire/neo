@@ -2,58 +2,50 @@
   "ApplicationConfiguration": {
     "Logger": {
       "Path": "Logs",
-      "ConsoleOutput": true,
-      "Active": true
+      "ConsoleOutput": false,
+      "Active": false
     },
     "Storage": {
-        "Engine": "LevelDBStore", // Candidates [MemoryStore, LevelDBStore, RocksDBStore]
-        "Path": "Data_LevelDB_{0}" // {0} is a placeholder for the network id
+      "Engine": "MemoryStore", // Candidates [MemoryStore, LevelDBStore, RocksDBStore]
+      "Path": "Data_LevelDB_{0}" // {0} is a placeholder for the network id
     },
     "P2P": {
-      "Port": 10339,
+      "Port": 10333,
       "MinDesiredConnections": 10,
       "MaxConnections": 40,
       "MaxConnectionsPerAddress": 3
     },
     "UnlockWallet": {
-      "Path": "F:/Data/Projekty/Ju5t/Projects/DShare/Secrets/Wallet05-Regular.json",
+      "Path": "../../Secrets/Wallet01.json",
       "Password": "1234",
-      "IsActive": true,
-      "StartConsensus": false
+      "IsActive": true
     },
     "Contracts": {
       "NeoNameService": "0x50ac1c37690cc2cfc594472833cf57505d5f46de"
     },
     "Plugins": {
-      "DownloadUrl": "https://api.github.com/repos/neo-project/neo/releases"
+      "DownloadUrl": "https://api.github.com/repos/neo-project/neo-modules/releases"
     }
   },
   "ProtocolConfiguration": {
-    "Network": 860833999,
+    "Network": 2054099550,
     "AddressVersion": 53,
     "MillisecondsPerBlock": 15000,
     "MaxTransactionsPerBlock": 512,
     "MemoryPoolMaxTransactions": 50000,
     "MaxTraceableBlocks": 2102400,
-    "Hardforks": {
-      "HF_Aspidochelone": 1730000,
-      "HF_Basilisk": 4120000,
-      "HF_Cockatrice": 5450000,
-      "HF_Domovoi": 5570000
-    },
+    "Hardforks": {},
     "InitialGasDistribution": 5200000000000000,
-    "ValidatorsCount": 7,
+    "ValidatorsCount": 4,
     "StandbyCommittee": [
       "02f255e85b8b57461fcbd82fab6e1d872bd93ff0ae6c82318ffe5cbf88bbbe5daa",
       "039370055d27fd1e49fa708a09dc18ac3dc4b2318140ed35205df8a03fde48ae19",
-      "026c91a84f14c747af4d2f284ff1750d047a0e05f172e0ea1844d769f4d4b850c2",
-      "021da1f574163192aff6511bb7a240debf7310f063776cb34e45973237e7de3e8d"
+      "026c91a84f14c747af4d2f284ff1750d047a0e05f172e0ea1844d769f4d4b850c2"
     ],
     "SeedList": [
-      "127.0.0.1:10333",
-      "127.0.0.1:10334",
-      "127.0.0.1:10335",
-      "127.0.0.1:10336"
+      "127.0.0.1:811",
+      "127.0.0.1:821",
+      "127.0.0.1:831"
     ]
   }
 }

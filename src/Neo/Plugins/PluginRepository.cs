@@ -104,7 +104,7 @@ namespace Neo.Plugins
                 ConstructorInfo constructor = type.GetConstructor(Type.EmptyTypes);
                 try
                 {
-                    constructor?.Invoke(null);
+                    Plugins.Add((Plugin)constructor?.Invoke(null)!);
                 }
                 catch (Exception ex)
                 {
@@ -113,7 +113,7 @@ namespace Neo.Plugins
             }
         }
 
-        internal void LoadPlugins()
+        public void FindAndLoadPlugins()
         {
             if (!Directory.Exists(PluginsDirectory)) return;
             List<Assembly> assemblies = new();
