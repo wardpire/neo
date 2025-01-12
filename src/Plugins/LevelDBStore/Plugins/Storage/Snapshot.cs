@@ -12,6 +12,7 @@
 using LevelDB;
 using Neo.Persistence;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Neo.Plugins.Storage
@@ -55,16 +56,16 @@ namespace Neo.Plugins.Storage
             var it = _db.CreateIterator(new LevelDB.ReadOptions() { Snapshot = _snapShot });
             if (direction == SeekDirection.Forward)
             {
-                for (it.Seek(prefix); it.IsValid(); it.Next())
+                for (it.Seek(keyOrPrefix); it.IsValid(); it.Next())
                     yield return (it.Key(), it.Value());
             }
             else
             {
                 // SeekForPrev
-                it.Seek(prefix);
+                it.Seek(keyOrPrefix);
                 if (!it.IsValid())
                     it.SeekToLast();
-                else if (it.Key().AsSpan().SequenceCompareTo(prefix) > 0)
+                else if (it.Key().AsSpan().SequenceCompareTo(keyOrPrefix) > 0)
                     it.Prev();
 
                 for (; it.IsValid(); it.Prev())
@@ -96,12 +97,12 @@ namespace Neo.Plugins.Storage
 
         public IEnumerator<KeyValuePair<byte[], byte[]>> GetEnumerator()
         {
-            using var iterator = _db.CreateIterator(_readOptions);
-            for (iterator.SeekToFirst(); iterator.Valid(); iterator.Next())
-                yield return new KeyValuePair<byte[], byte[]>(iterator.Key(), iterator.Value());
+            return _db.GetEnumerator();
         }
 
-        IEnumerator IEnumerable.GetEnumerator() =>
-            GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return _db.GetEnumerator();
+        }
     }
 }

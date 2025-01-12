@@ -15,6 +15,7 @@ using LevelDB;
 using LevelDB.NativePointer;
 using Neo.Persistence;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Neo.Plugins.Storage
@@ -29,13 +30,13 @@ namespace Neo.Plugins.Storage
 
         public Store(string path)
         {
-            var options = new Options { CreateIfMissing = true };
-            db = new DB(options, path);
+            _options = new Options { CreateIfMissing = true };
+            _db = new DB(_options, path);
         }
 
         public void Delete(byte[] key)
         {
-            db.Delete(key);
+            _db.Delete(key);
         }
 
         public void Dispose()
@@ -46,7 +47,7 @@ namespace Neo.Plugins.Storage
 
         public IEnumerable<(byte[], byte[])> Seek(byte[] prefix, SeekDirection direction = SeekDirection.Forward)
         {
-            var it = db.CreateIterator(new ReadOptions());
+            var it = _db.CreateIterator(new ReadOptions());
             if (direction == SeekDirection.Forward)
             {
                 for (it.Seek(prefix); it.IsValid(); it.Next())
@@ -68,34 +69,44 @@ namespace Neo.Plugins.Storage
 
         public ISnapshot GetSnapshot()
         {
-            return new Snapshot(db);
+            return new Snapshot(_db);
         }
 
         public void Put(byte[] key, byte[] value)
         {
-            db.Put(key, value);
+            _db.Put(key, value);
         }
 
         public void PutSync(byte[] key, byte[] value)
         {
-            db.Put(key, value);
+            _db.Put(key, value);
         }
 
         public bool Contains(byte[] key)
         {
-            var val = db.Get(key);
+            var val = _db.Get(key);
             return val != null && val.Length > 0;
         }
 
         public byte[] TryGet(byte[] key)
         {
-            return db.Get(key);
+            return _db.Get(key);
         }
 
         public bool TryGet(byte[] key, out byte[] value)
         {
-            value = db.Get(key);
+            value = _db.Get(key);
             return value != null && value.Length > 0;
+        }
+
+        public IEnumerator<KeyValuePair<byte[], byte[]>> GetEnumerator()
+        {
+            return _db.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return _db.GetEnumerator();
         }
     }
 }
