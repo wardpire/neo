@@ -29,7 +29,7 @@ namespace Neo.SmartContract.Native
     /// <summary>
     /// Represents the NEO token in the NEO system.
     /// </summary>
-    public sealed class NeoToken : FungibleToken<NeoToken.NeoAccountState>
+    public class NeoToken : FungibleToken<NeoToken.NeoAccountState>
     {
         public override string Symbol => "NEO";
         public override byte Decimals => 0;
@@ -70,7 +70,7 @@ namespace Neo.SmartContract.Native
         [ContractEvent(Hardfork.HF_Cockatrice, 3, name: "CommitteeChanged",
            "old", ContractParameterType.Array,
            "new", ContractParameterType.Array)]
-        internal NeoToken() : base()
+        public NeoToken() : base()
         {
             TotalAmount = 100000000 * Factor;
             _votersCount = CreateStorageKey(Prefix_VotersCount);
