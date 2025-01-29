@@ -86,11 +86,11 @@ namespace Neo.GUI
                     },
                     new ListViewItem.ListViewSubItem
                     {
-                        Name = NativeContract.NEO.Symbol
+                        Name = Service.NeoSystem.NativeContractRepository.NEO.Symbol
                     },
                     new ListViewItem.ListViewSubItem
                     {
-                        Name = NativeContract.GAS.Symbol
+                        Name = Service.NeoSystem.NativeContractRepository.GAS.Symbol
                     }
                 }, -1, listView1.Groups[groupName])
                 {
@@ -160,7 +160,7 @@ namespace Neo.GUI
             foreach (ListViewItem item in listView3.Items)
             {
                 uint? height = item.Tag as uint?;
-                int? confirmations = (int)NativeContract.Ledger.CurrentIndex(Service.NeoSystem.StoreView) - (int?)height + 1;
+                int? confirmations = (int)Service.NeoSystem.NativeContractRepository.Ledger.CurrentIndex(Service.NeoSystem.StoreView) - (int?)height + 1;
                 if (confirmations <= 0) confirmations = null;
                 item.SubItems["confirmations"].Text = confirmations?.ToString() ?? Strings.Unconfirmed;
             }
@@ -181,7 +181,7 @@ namespace Neo.GUI
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            uint height = NativeContract.Ledger.CurrentIndex(Service.NeoSystem.StoreView);
+            uint height = Service.NeoSystem.NativeContractRepository.Ledger.CurrentIndex(Service.NeoSystem.StoreView);
             uint headerHeight = Service.NeoSystem.HeaderCache.Last?.Index ?? height;
 
             lbl_height.Text = $"{height}/{headerHeight}";
@@ -215,16 +215,16 @@ namespace Neo.GUI
                     sb.EmitDynamicCall(assetId, "name");
                     script = sb.ToArray();
                 }
-                using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, gas: 0_20000000L * addresses.Length);
+                using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, Service.NeoSystem.NativeContractRepository, gas: 0_20000000L * addresses.Length);
                 if (engine.State.HasFlag(VMState.FAULT)) continue;
                 string name = engine.ResultStack.Pop().GetString();
                 byte decimals = (byte)engine.ResultStack.Pop().GetInteger();
                 BigInteger[] balances = ((VMArray)engine.ResultStack.Pop()).Select(p => p.GetInteger()).ToArray();
                 string symbol = null;
-                if (assetId.Equals(NativeContract.NEO.Hash))
-                    symbol = NativeContract.NEO.Symbol;
-                else if (assetId.Equals(NativeContract.GAS.Hash))
-                    symbol = NativeContract.GAS.Symbol;
+                if (assetId.Equals(Service.NeoSystem.NativeContractRepository.NEO.Hash))
+                    symbol = Service.NeoSystem.NativeContractRepository.NEO.Symbol;
+                else if (assetId.Equals(Service.NeoSystem.NativeContractRepository.GAS.Hash))
+                    symbol = Service.NeoSystem.NativeContractRepository.GAS.Symbol;
                 if (symbol != null)
                     for (int i = 0; i < addresses.Length; i++)
                         listView1.Items[addresses[i].ToAddress(Service.NeoSystem.Settings.AddressVersion)].SubItems[symbol].Text = new BigDecimal(balances[i], decimals).ToString();
@@ -286,7 +286,7 @@ namespace Neo.GUI
             if (dialog.ShowDialog() != DialogResult.OK) return;
             try
             {
-                Service.OpenWallet(dialog.WalletPath, dialog.Password);
+                Service.OpenWallet(dialog.WalletPath, dialog.Password, Service.NeoSystem.NativeContractRepository);
             }
             catch (CryptographicException)
             {
@@ -345,7 +345,7 @@ namespace Neo.GUI
                 using (DeployContractDialog dialog = new DeployContractDialog())
                 {
                     if (dialog.ShowDialog() != DialogResult.OK) return;
-                    script = dialog.GetScript();
+                    script = dialog.GetScript(Service.NeoSystem.NativeContractRepository);
                 }
                 using (InvokeContractDialog dialog = new InvokeContractDialog(script))
                 {
@@ -431,8 +431,8 @@ namespace Neo.GUI
             voteToolStripMenuItem.Enabled =
                 listView1.SelectedIndices.Count == 1 &&
                 !((WalletAccount)listView1.SelectedItems[0].Tag).WatchOnly &&
-                !string.IsNullOrEmpty(listView1.SelectedItems[0].SubItems[NativeContract.NEO.Symbol].Text) &&
-                decimal.Parse(listView1.SelectedItems[0].SubItems[NativeContract.NEO.Symbol].Text) > 0;
+                !string.IsNullOrEmpty(listView1.SelectedItems[0].SubItems[Service.NeoSystem.NativeContractRepository.NEO.Symbol].Text) &&
+                decimal.Parse(listView1.SelectedItems[0].SubItems[Service.NeoSystem.NativeContractRepository.NEO.Symbol].Text) > 0;
             复制到剪贴板CToolStripMenuItem.Enabled = listView1.SelectedIndices.Count == 1;
             删除DToolStripMenuItem.Enabled = listView1.SelectedIndices.Count > 0;
         }

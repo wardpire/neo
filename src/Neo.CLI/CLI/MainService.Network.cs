@@ -57,7 +57,7 @@ namespace Neo.CLI
         [ConsoleCommand("broadcast block", Category = "Network Commands")]
         private void OnBroadcastGetBlocksByHashCommand(UInt256 hash)
         {
-            OnBroadcastCommand(MessageCommand.Block, NativeContract.Ledger.GetBlock(NeoSystem.StoreView, hash));
+            OnBroadcastCommand(MessageCommand.Block, NeoSystem.NativeContractRepository.Ledger.GetBlock(NeoSystem.StoreView, hash));
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace Neo.CLI
         [ConsoleCommand("broadcast block", Category = "Network Commands")]
         private void OnBroadcastGetBlocksByHeightCommand(uint height)
         {
-            OnBroadcastCommand(MessageCommand.Block, NativeContract.Ledger.GetBlock(NeoSystem.StoreView, height));
+            OnBroadcastCommand(MessageCommand.Block, NeoSystem.NativeContractRepository.Ledger.GetBlock(NeoSystem.StoreView, height));
         }
 
         /// <summary>
@@ -143,7 +143,7 @@ namespace Neo.CLI
 
             try
             {
-                ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToRelay.ToString(), NeoSystem.StoreView);
+                ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToRelay.ToString(), NeoSystem.StoreView, NeoSystem.NativeContractRepository);
                 if (!context.Completed)
                 {
                     ConsoleHelper.Error("The signature is incomplete.");

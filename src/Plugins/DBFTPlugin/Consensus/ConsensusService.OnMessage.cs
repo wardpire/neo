@@ -88,7 +88,7 @@ namespace Neo.Plugins.DBFTPlugin.Consensus
                 return;
             }
 
-            if (message.TransactionHashes.Any(p => NativeContract.Ledger.ContainsTransaction(context.Snapshot, p)))
+            if (message.TransactionHashes.Any(p => neoSystem.NativeContractRepository.Ledger.ContainsTransaction(context.Snapshot, p)))
             {
                 Log($"Invalid request: transaction already exists", LogLevel.Warning);
                 return;
@@ -128,7 +128,7 @@ namespace Neo.Plugins.DBFTPlugin.Consensus
             {
                 if (mempoolVerified.TryGetValue(hash, out Transaction tx))
                 {
-                    if (NativeContract.Ledger.ContainsConflictHash(context.Snapshot, hash, tx.Signers.Select(s => s.Account), neoSystem.Settings.MaxTraceableBlocks))
+                    if (neoSystem.NativeContractRepository.Ledger.ContainsConflictHash(context.Snapshot, hash, tx.Signers.Select(s => s.Account), neoSystem.Settings.MaxTraceableBlocks))
                     {
                         Log($"Invalid request: transaction has on-chain conflict", LogLevel.Warning);
                         return;
@@ -141,7 +141,7 @@ namespace Neo.Plugins.DBFTPlugin.Consensus
                 {
                     if (neoSystem.MemPool.TryGetValue(hash, out tx))
                     {
-                        if (NativeContract.Ledger.ContainsConflictHash(context.Snapshot, hash, tx.Signers.Select(s => s.Account), neoSystem.Settings.MaxTraceableBlocks))
+                        if (neoSystem.NativeContractRepository.Ledger.ContainsConflictHash(context.Snapshot, hash, tx.Signers.Select(s => s.Account), neoSystem.Settings.MaxTraceableBlocks))
                         {
                             Log($"Invalid request: transaction has on-chain conflict", LogLevel.Warning);
                             return;

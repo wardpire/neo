@@ -81,7 +81,7 @@ namespace Neo.UnitTests
             wallet["accounts"] = new JArray();
             wallet["extra"] = null;
             wallet.ToString().Should().Be("{\"name\":\"noname\",\"version\":\"1.0\",\"scrypt\":{\"n\":2,\"r\":1,\"p\":1},\"accounts\":[],\"extra\":null}");
-            return new NEP6Wallet(null, password, TestProtocolSettings.Default, wallet);
+            return new NEP6Wallet(null, password, TestProtocolSettings.Default, wallet, TestBlockchain.TheNeoSystem.NativeContractRepository);
         }
 
         internal static StorageItem GetStorageItem(byte[] value)

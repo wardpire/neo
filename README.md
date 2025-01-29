@@ -6,6 +6,7 @@
  - `LevelDB.Standard` nuget was used as `levelDB` dependency (IMHO easier handling of native DLLs)
  - Protocol options can be binded from .net configuration (and thus from appsetings.json) more easily
  - Plug-ins can be configured at runtime - it is not mandatory to load plug-ins by scanning special folder with DLLs
+ - Added `NativeContract` repository without static properties to greatly improve custom extensibility of native contracts and automatic tests
 
 
  <br />

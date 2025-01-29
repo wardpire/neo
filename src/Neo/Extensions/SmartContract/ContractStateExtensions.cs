@@ -74,7 +74,7 @@ namespace Neo.Extensions
         /// <param name="seekDirection"></param>
         /// <returns>All storage of the given contract.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="snapshot"/> is null</exception>
-        public static IEnumerable<(StorageKey Key, StorageItem Value)> FindContractStorage(this ContractManagement contractManagement, DataCache snapshot, int contractId, byte[] prefix = null, SeekDirection seekDirection = SeekDirection.Forward)
+        public static IEnumerable<(StorageKey Key, StorageItem Value)> FindContractStorage(this IContractManagement contractManagement, DataCache snapshot, int contractId, byte[] prefix = null, SeekDirection seekDirection = SeekDirection.Forward)
         {
             if (snapshot is null)
                 throw new ArgumentNullException(nameof(snapshot));

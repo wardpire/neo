@@ -33,11 +33,6 @@ namespace Neo.Network.P2P.Payloads
         public const int MaxResultSize = ushort.MaxValue;
 
         /// <summary>
-        /// Represents the fixed value of the <see cref="Transaction.Script"/> field of the oracle responding transaction.
-        /// </summary>
-        public static readonly byte[] FixedScript;
-
-        /// <summary>
         /// The ID of the oracle request.
         /// </summary>
         public ulong Id;
@@ -59,13 +54,6 @@ namespace Neo.Network.P2P.Payloads
             sizeof(ulong) +                 //Id
             sizeof(OracleResponseCode) +    //ResponseCode
             Result.GetVarSize();            //Result
-
-        static OracleResponse()
-        {
-            using ScriptBuilder sb = new();
-            sb.EmitDynamicCall(NativeContract.Oracle.Hash, "finish");
-            FixedScript = sb.ToArray();
-        }
 
         protected override void DeserializeWithoutType(ref MemoryReader reader)
         {
@@ -95,14 +83,30 @@ namespace Neo.Network.P2P.Payloads
             return json;
         }
 
-        public override bool Verify(DataCache snapshot, Transaction tx)
+        private static byte[] _fixedScript;
+
+        /// <summary>
+        /// Represents the fixed value of the <see cref="Transaction.Script"/> field of the oracle responding transaction.
+        /// </summary>
+        public static byte[] GetFixedScript(NativeContractRepository nativeContractRepository)
+        {
+            if (_fixedScript == default)
+            {
+                using ScriptBuilder sb = new();
+                sb.EmitDynamicCall(nativeContractRepository.Oracle.Hash, "finish");
+                _fixedScript = sb.ToArray();
+            }
+            return _fixedScript;
+        }
+
+        public override bool Verify(DataCache snapshot, Transaction tx, NativeContractRepository nativeContractRepository)
         {
             if (tx.Signers.Any(p => p.Scopes != WitnessScope.None)) return false;
-            if (!tx.Script.Span.SequenceEqual(FixedScript)) return false;
-            OracleRequest request = NativeContract.Oracle.GetRequest(snapshot, Id);
+            if (!tx.Script.Span.SequenceEqual(GetFixedScript(nativeContractRepository))) return false;
+            OracleRequest request = nativeContractRepository.Oracle.GetRequest(snapshot, Id);
             if (request is null) return false;
             if (tx.NetworkFee + tx.SystemFee != request.GasForResponse) return false;
-            UInt160 oracleAccount = Contract.GetBFTAddress(NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, NativeContract.Ledger.CurrentIndex(snapshot) + 1));
+            UInt160 oracleAccount = Contract.GetBFTAddress(nativeContractRepository.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, nativeContractRepository.Ledger.CurrentIndex(snapshot) + 1));
             return tx.Signers.Any(p => p.Account.Equals(oracleAccount));
         }
     }

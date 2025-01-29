@@ -16,6 +16,7 @@ using Neo.Network.P2P.Payloads;
 using Neo.Network.RPC.Models;
 using Neo.SmartContract;
 using Neo.SmartContract.Manifest;
+using Neo.SmartContract.Native;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -39,9 +40,10 @@ namespace Neo.Network.RPC
         private readonly Uri baseAddress;
         internal readonly ProtocolSettings protocolSettings;
 
-        public RpcClient(Uri url, string rpcUser = default, string rpcPass = default, ProtocolSettings protocolSettings = null)
+        public RpcClient(NativeContractRepository nativeContractRepository, Uri url, string rpcUser = default, string rpcPass = default, ProtocolSettings protocolSettings = null)
         {
             httpClient = new HttpClient();
+            NativeContractRepository = nativeContractRepository;
             baseAddress = url;
             if (!string.IsNullOrEmpty(rpcUser) && !string.IsNullOrEmpty(rpcPass))
             {
@@ -51,15 +53,18 @@ namespace Neo.Network.RPC
             this.protocolSettings = protocolSettings ?? ProtocolSettings.Default;
         }
 
-        public RpcClient(HttpClient client, Uri url, ProtocolSettings protocolSettings = null)
+        public RpcClient(NativeContractRepository nativeContractRepository, HttpClient client, Uri url, ProtocolSettings protocolSettings = null)
         {
             httpClient = client;
             baseAddress = url;
+            NativeContractRepository = nativeContractRepository;
             this.protocolSettings = protocolSettings ?? ProtocolSettings.Default;
         }
 
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls
+
+        public NativeContractRepository NativeContractRepository { get; }
 
         protected virtual void Dispose(bool disposing)
         {
@@ -432,7 +437,7 @@ namespace Neo.Network.RPC
         /// </summary>
         public async Task<RpcInvokeResult> InvokeFunctionAsync(string scriptHash, string operation, RpcStack[] stacks, params Signer[] signer)
         {
-            List<JToken> parameters = new() { scriptHash.AsScriptHash(), operation, stacks.Select(p => p.ToJson()).ToArray() };
+            List<JToken> parameters = new() { scriptHash.AsScriptHash(NativeContractRepository), operation, stacks.Select(p => p.ToJson()).ToArray() };
             if (signer.Length > 0)
             {
                 parameters.Add(signer.Select(p => p.ToJson()).ToArray());
@@ -458,7 +463,7 @@ namespace Neo.Network.RPC
 
         public async Task<RpcUnclaimedGas> GetUnclaimedGasAsync(string address)
         {
-            var result = await RpcSendAsync(GetRpcName(), address.AsScriptHash()).ConfigureAwait(false);
+            var result = await RpcSendAsync(GetRpcName(), address.AsScriptHash(NativeContractRepository)).ConfigureAwait(false);
             return RpcUnclaimedGas.FromJson((JObject)result);
         }
 
@@ -570,7 +575,7 @@ namespace Neo.Network.RPC
         {
             var result = await RpcSendAsync(GetRpcName(), assetId).ConfigureAwait(false);
             BigInteger balance = BigInteger.Parse(result["balance"].AsString());
-            byte decimals = await new Nep17API(this).DecimalsAsync(UInt160.Parse(assetId.AsScriptHash())).ConfigureAwait(false);
+            byte decimals = await new Nep17API(this).DecimalsAsync(UInt160.Parse(assetId.AsScriptHash(NativeContractRepository))).ConfigureAwait(false);
             return new BigDecimal(balance, decimals);
         }
 
@@ -580,7 +585,7 @@ namespace Neo.Network.RPC
         public async Task<BigDecimal> GetWalletUnclaimedGasAsync()
         {
             var result = await RpcSendAsync(GetRpcName()).ConfigureAwait(false);
-            return BigDecimal.Parse(result.AsString(), SmartContract.Native.NativeContract.GAS.Decimals);
+            return BigDecimal.Parse(result.AsString(), NativeContractRepository.GAS.Decimals);
         }
 
         /// <summary>
@@ -617,8 +622,8 @@ namespace Neo.Network.RPC
         /// <returns>This function returns Signed Transaction JSON if successful, ContractParametersContext JSON if signing failed.</returns>
         public async Task<JObject> SendFromAsync(string assetId, string fromAddress, string toAddress, string amount)
         {
-            return (JObject)await RpcSendAsync(GetRpcName(), assetId.AsScriptHash(), fromAddress.AsScriptHash(),
-                                      toAddress.AsScriptHash(), amount).ConfigureAwait(false);
+            return (JObject)await RpcSendAsync(GetRpcName(), assetId.AsScriptHash(NativeContractRepository), fromAddress.AsScriptHash(NativeContractRepository),
+                                      toAddress.AsScriptHash(NativeContractRepository), amount).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -630,7 +635,7 @@ namespace Neo.Network.RPC
             var parameters = new List<JToken>();
             if (!string.IsNullOrEmpty(fromAddress))
             {
-                parameters.Add(fromAddress.AsScriptHash());
+                parameters.Add(fromAddress.AsScriptHash(NativeContractRepository));
             }
             parameters.Add(outputs.Select(p => p.ToJson(protocolSettings)).ToArray());
 
@@ -643,7 +648,7 @@ namespace Neo.Network.RPC
         /// <returns>This function returns Signed Transaction JSON if successful, ContractParametersContext JSON if signing failed.</returns>
         public async Task<JObject> SendToAddressAsync(string assetId, string address, string amount)
         {
-            return (JObject)await RpcSendAsync(GetRpcName(), assetId.AsScriptHash(), address.AsScriptHash(), amount)
+            return (JObject)await RpcSendAsync(GetRpcName(), assetId.AsScriptHash(NativeContractRepository), address.AsScriptHash(NativeContractRepository), amount)
                 .ConfigureAwait(false);
         }
 
@@ -653,7 +658,7 @@ namespace Neo.Network.RPC
         /// <returns>This function returns Signed Transaction JSON if successful, ContractParametersContext JSON if signing failed.</returns>
         public async Task<JObject> CancelTransactionAsync(UInt256 txId, string[] signers, string extraFee)
         {
-            JToken[] parameters = signers.Select(s => (JString)s.AsScriptHash()).ToArray();
+            JToken[] parameters = signers.Select(s => (JString)s.AsScriptHash(NativeContractRepository)).ToArray();
             return (JObject)await RpcSendAsync(GetRpcName(), txId.ToString(), new JArray(parameters), extraFee).ConfigureAwait(false);
         }
 
@@ -692,7 +697,7 @@ namespace Neo.Network.RPC
         {
             startTimestamp ??= 0;
             endTimestamp ??= DateTime.UtcNow.ToTimestampMS();
-            var result = await RpcSendAsync(GetRpcName(), address.AsScriptHash(), startTimestamp, endTimestamp)
+            var result = await RpcSendAsync(GetRpcName(), address.AsScriptHash(NativeContractRepository), startTimestamp, endTimestamp)
                 .ConfigureAwait(false);
             return RpcNep17Transfers.FromJson((JObject)result, protocolSettings);
         }
@@ -703,7 +708,7 @@ namespace Neo.Network.RPC
         /// </summary>
         public async Task<RpcNep17Balances> GetNep17BalancesAsync(string address)
         {
-            var result = await RpcSendAsync(GetRpcName(), address.AsScriptHash())
+            var result = await RpcSendAsync(GetRpcName(), address.AsScriptHash(NativeContractRepository))
                 .ConfigureAwait(false);
             return RpcNep17Balances.FromJson((JObject)result, protocolSettings);
         }

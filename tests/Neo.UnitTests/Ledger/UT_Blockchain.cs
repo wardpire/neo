@@ -63,9 +63,9 @@ namespace Neo.UnitTests.Ledger
 
             // Fake balance
 
-            var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(acc.ScriptHash);
+            var key = new KeyBuilder(TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Id, 20).Add(acc.ScriptHash);
             var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
-            entry.GetInteroperable<AccountState>().Balance = 100_000_000 * NativeContract.GAS.Factor;
+            entry.GetInteroperable<AccountState>().Balance = 100_000_000 * TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Factor;
             snapshot.Commit();
 
             // Make transaction
@@ -86,7 +86,7 @@ namespace Neo.UnitTests.Ledger
             key?.CopyTo(buffer.AsSpan(1));
             return new()
             {
-                Id = NativeContract.NEO.Id,
+                Id = TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Id,
                 Key = buffer
             };
         }
@@ -100,18 +100,18 @@ namespace Neo.UnitTests.Ledger
             var accA = walletA.CreateAccount();
             var walletB = TestUtils.GenerateTestWallet("456");
             var accB = walletB.CreateAccount();
-            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
+            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
             engine.LoadScript(Array.Empty<byte>());
 
             // Fake balance for accounts A and B.
-            var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(accA.ScriptHash);
+            var key = new KeyBuilder(TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Id, 20).Add(accA.ScriptHash);
             var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
-            entry.GetInteroperable<AccountState>().Balance = 100_000_000 * NativeContract.GAS.Factor;
+            entry.GetInteroperable<AccountState>().Balance = 100_000_000 * TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Factor;
             snapshot.Commit();
 
-            key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(accB.ScriptHash);
+            key = new KeyBuilder(TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Id, 20).Add(accB.ScriptHash);
             entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
-            entry.GetInteroperable<AccountState>().Balance = 100_000_000 * NativeContract.GAS.Factor;
+            entry.GetInteroperable<AccountState>().Balance = 100_000_000 * TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Factor;
             snapshot.Commit();
 
             // Create transactions:
@@ -142,7 +142,7 @@ namespace Neo.UnitTests.Ledger
                 sb.EmitSysCall(ApplicationEngine.System_Contract_NativeOnPersist);
                 onPersistScript = sb.ToArray();
             }
-            using (ApplicationEngine engine2 = ApplicationEngine.Create(TriggerType.OnPersist, null, snapshot, block, TestBlockchain.TheNeoSystem.Settings, 0))
+            using (ApplicationEngine engine2 = ApplicationEngine.Create(TriggerType.OnPersist, null, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, block, TestBlockchain.TheNeoSystem.Settings, 0))
             {
                 engine2.LoadScript(onPersistScript);
                 if (engine2.Execute() != VMState.HALT) throw engine2.FaultException;
@@ -158,7 +158,7 @@ namespace Neo.UnitTests.Ledger
                 sb.EmitSysCall(ApplicationEngine.System_Contract_NativePostPersist);
                 postPersistScript = sb.ToArray();
             }
-            using (ApplicationEngine engine2 = ApplicationEngine.Create(TriggerType.PostPersist, null, snapshot, block, TestBlockchain.TheNeoSystem.Settings, 0))
+            using (ApplicationEngine engine2 = ApplicationEngine.Create(TriggerType.PostPersist, null, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, block, TestBlockchain.TheNeoSystem.Settings, 0))
             {
                 engine2.LoadScript(postPersistScript);
                 if (engine2.Execute() != VMState.HALT) throw engine2.FaultException;

@@ -286,7 +286,7 @@ namespace Neo.Plugins.RpcServer
             UInt160 script_hash = Result.Ok_Or(() => AddressToScriptHash(address, system.Settings.AddressVersion), RpcError.InvalidParams);
 
             var snapshot = system.StoreView;
-            json["unclaimed"] = NativeContract.NEO.UnclaimedGas(snapshot, script_hash, NativeContract.Ledger.CurrentIndex(snapshot) + 1).ToString();
+            json["unclaimed"] = system.NativeContractRepository.NEO.UnclaimedGas(snapshot, script_hash, system.NativeContractRepository.Ledger.CurrentIndex(snapshot) + 1).ToString();
             json["address"] = script_hash.ToAddress(system.Settings.AddressVersion);
             return json;
         }

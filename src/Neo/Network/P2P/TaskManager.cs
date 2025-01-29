@@ -103,7 +103,7 @@ namespace Neo.Network.P2P
                 return;
 
             // Do not accept payload of type InventoryType.TX if not synced on HeaderHeight
-            uint currentHeight = Math.Max(NativeContract.Ledger.CurrentIndex(system.StoreView), lastSeenPersistedIndex);
+            uint currentHeight = Math.Max(system.NativeContractRepository.Ledger.CurrentIndex(system.StoreView), lastSeenPersistedIndex);
             uint headerHeight = system.HeaderCache.Last?.Index ?? currentHeight;
             if (currentHeight < headerHeight && (payload.Type == InventoryType.TX || (payload.Type == InventoryType.Block && currentHeight < session.LastBlockIndex - InvPayload.MaxHashesCount)))
             {
@@ -352,7 +352,7 @@ namespace Neo.Network.P2P
             {
                 session.AvailableTasks.Remove(knownHashes);
                 // Search any similar hash that is on Singleton's knowledge, which means, on the way or already processed
-                session.AvailableTasks.RemoveWhere(p => NativeContract.Ledger.ContainsBlock(snapshot, p));
+                session.AvailableTasks.RemoveWhere(p => system.NativeContractRepository.Ledger.ContainsBlock(snapshot, p));
                 HashSet<UInt256> hashes = new(session.AvailableTasks);
                 if (hashes.Count > 0)
                 {
@@ -368,7 +368,7 @@ namespace Neo.Network.P2P
                 }
             }
 
-            uint currentHeight = Math.Max(NativeContract.Ledger.CurrentIndex(snapshot), lastSeenPersistedIndex);
+            uint currentHeight = Math.Max(system.NativeContractRepository.Ledger.CurrentIndex(snapshot), lastSeenPersistedIndex);
             uint headerHeight = system.HeaderCache.Last?.Index ?? currentHeight;
             // When the number of AvailableTasks is no more than 0,
             // no pending tasks of InventoryType.Block, it should process pending the tasks of headers

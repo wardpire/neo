@@ -83,7 +83,7 @@ namespace Neo.Plugins.StateService.Verification
             Retries = 0;
             myIndex = -1;
             rootIndex = index;
-            verifiers = NativeContract.RoleManagement.GetDesignatedByRole(StatePlugin._system.StoreView, Role.StateValidator, index);
+            verifiers = StatePlugin._system.NativeContractRepository.RoleManagement.GetDesignatedByRole(StatePlugin._system.StoreView, Role.StateValidator, index);
             if (wallet is null) return;
             for (int i = 0; i < verifiers.Length; i++)
             {
@@ -134,7 +134,7 @@ namespace Neo.Plugins.StateService.Verification
             if (StateRoot.Witness is null)
             {
                 Contract contract = Contract.CreateMultiSigContract(M, verifiers);
-                ContractParametersContext sc = new(StatePlugin._system.StoreView, StateRoot, StatePlugin._system.Settings.Network);
+                ContractParametersContext sc = new(StatePlugin._system.StoreView, StateRoot, StatePlugin._system.Settings.Network, StatePlugin._system.NativeContractRepository);
                 for (int i = 0, j = 0; i < verifiers.Length && j < M; i++)
                 {
                     if (!signatures.TryGetValue(i, out byte[] sig)) continue;
@@ -168,7 +168,7 @@ namespace Neo.Plugins.StateService.Verification
                 Sender = Contract.CreateSignatureRedeemScript(verifiers[MyIndex]).ToScriptHash(),
                 Data = data,
             };
-            ContractParametersContext sc = new ContractParametersContext(StatePlugin._system.StoreView, msg, StatePlugin._system.Settings.Network);
+            ContractParametersContext sc = new ContractParametersContext(StatePlugin._system.StoreView, msg, StatePlugin._system.Settings.Network, StatePlugin._system.NativeContractRepository);
             wallet.Sign(sc);
             msg.Witness = sc.GetWitnesses()[0];
             return msg;

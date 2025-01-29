@@ -95,11 +95,11 @@ namespace Neo.UnitTests.Plugins
         {
             lock (s_locker)
             {
-                Plugin.Plugins.Clear();
-                Plugin.SendMessage("hey1").Should().BeFalse();
+                TestBlockchain.TheNeoSystem.PluginRepository.Plugins.Clear();
+                TestBlockchain.TheNeoSystem.PluginRepository.SendMessage("hey1").Should().BeFalse();
 
                 var lp = new TestPlugin();
-                Plugin.SendMessage("hey2").Should().BeTrue();
+                TestBlockchain.TheNeoSystem.PluginRepository.SendMessage("hey2").Should().BeTrue();
             }
         }
 

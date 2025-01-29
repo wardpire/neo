@@ -78,7 +78,7 @@ namespace Neo.UnitTests.Network.P2P.Payloads
                 ValidUntilBlock = 0,
                 Version = 0,
                 Witnesses = Array.Empty<Witness>()
-            }, TestProtocolSettings.Default.Network);
+            }, TestProtocolSettings.Default.Network, new Neo.SmartContract.Native.NativeContractRepository());
 
             for (int x = 0; x < m; x++)
             {

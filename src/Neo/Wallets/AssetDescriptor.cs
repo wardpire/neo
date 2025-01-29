@@ -49,9 +49,9 @@ namespace Neo.Wallets
         /// <param name="snapshot">The snapshot used to read data.</param>
         /// <param name="settings">The <see cref="ProtocolSettings"/> used by the <see cref="ApplicationEngine"/>.</param>
         /// <param name="asset_id">The id of the asset.</param>
-        public AssetDescriptor(DataCache snapshot, ProtocolSettings settings, UInt160 asset_id)
+        public AssetDescriptor(DataCache snapshot, ProtocolSettings settings, UInt160 asset_id, NativeContractRepository nativeContractRepository)
         {
-            var contract = NativeContract.ContractManagement.GetContract(snapshot, asset_id);
+            var contract = nativeContractRepository.ContractManagement.GetContract(snapshot, asset_id);
             if (contract is null) throw new ArgumentException(null, nameof(asset_id));
 
             byte[] script;
@@ -61,7 +61,7 @@ namespace Neo.Wallets
                 sb.EmitDynamicCall(asset_id, "symbol", CallFlags.ReadOnly);
                 script = sb.ToArray();
             }
-            using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, settings: settings, gas: 0_30000000L);
+            using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot,nativeContractRepository, settings: settings, gas: 0_30000000L);
             if (engine.State != VMState.HALT) throw new ArgumentException(null, nameof(asset_id));
             AssetId = asset_id;
             AssetName = contract.Manifest.Name;

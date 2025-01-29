@@ -39,8 +39,8 @@ namespace Neo.UnitTests.Ledger
             var randomBytes = new byte[16];
             random.NextBytes(randomBytes);
             Mock<Transaction> mock = new();
-            mock.Setup(p => p.VerifyStateDependent(It.IsAny<ProtocolSettings>(), It.IsAny<ClonedCache>(), It.IsAny<TransactionVerificationContext>(), It.IsAny<IEnumerable<Transaction>>())).Returns(VerifyResult.Succeed);
-            mock.Setup(p => p.VerifyStateIndependent(It.IsAny<ProtocolSettings>())).Returns(VerifyResult.Succeed);
+            mock.Setup(p => p.VerifyStateDependent(It.IsAny<ProtocolSettings>(), It.IsAny<ClonedCache>(), It.IsAny<TransactionVerificationContext>(), TestBlockchain.TheNeoSystem.NativeContractRepository, It.IsAny<IEnumerable<Transaction>>())).Returns(VerifyResult.Succeed);
+            mock.Setup(p => p.VerifyStateIndependent(It.IsAny<ProtocolSettings>(), TestBlockchain.TheNeoSystem.NativeContractRepository)).Returns(VerifyResult.Succeed);
             mock.Object.Script = randomBytes;
             mock.Object.NetworkFee = networkFee;
             mock.Object.SystemFee = systemFee;
@@ -63,69 +63,69 @@ namespace Neo.UnitTests.Ledger
             // Fake balance
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
 
-            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
-            BigInteger balance = NativeContract.GAS.BalanceOf(snapshotCache, UInt160.Zero);
-            await NativeContract.GAS.Burn(engine, UInt160.Zero, balance);
-            _ = NativeContract.GAS.Mint(engine, UInt160.Zero, 8, false);
+            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
+            BigInteger balance = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.BalanceOf(snapshotCache, UInt160.Zero);
+            await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(engine, UInt160.Zero, balance);
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(engine, UInt160.Zero, 8, false);
 
             // Test
             TransactionVerificationContext verificationContext = new();
             var tx = CreateTransactionWithFee(1, 2);
             tx.Attributes = new TransactionAttribute[] { new OracleResponse() { Code = OracleResponseCode.ConsensusUnreachable, Id = 1, Result = Array.Empty<byte>() } };
             var conflicts = new List<Transaction>();
-            verificationContext.CheckTransaction(tx, conflicts, snapshotCache).Should().BeTrue();
+            verificationContext.CheckTransaction(tx, conflicts, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().BeTrue();
             verificationContext.AddTransaction(tx);
 
             tx = CreateTransactionWithFee(2, 1);
             tx.Attributes = new TransactionAttribute[] { new OracleResponse() { Code = OracleResponseCode.ConsensusUnreachable, Id = 1, Result = Array.Empty<byte>() } };
-            verificationContext.CheckTransaction(tx, conflicts, snapshotCache).Should().BeFalse();
+            verificationContext.CheckTransaction(tx, conflicts, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().BeFalse();
         }
 
         [TestMethod]
         public async Task TestTransactionSenderFee()
         {
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
-            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
-            BigInteger balance = NativeContract.GAS.BalanceOf(snapshotCache, UInt160.Zero);
-            await NativeContract.GAS.Burn(engine, UInt160.Zero, balance);
-            _ = NativeContract.GAS.Mint(engine, UInt160.Zero, 8, true);
+            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
+            BigInteger balance = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.BalanceOf(snapshotCache, UInt160.Zero);
+            await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(engine, UInt160.Zero, balance);
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(engine, UInt160.Zero, 8, true);
 
             TransactionVerificationContext verificationContext = new();
             var tx = CreateTransactionWithFee(1, 2);
             var conflicts = new List<Transaction>();
-            verificationContext.CheckTransaction(tx, conflicts, snapshotCache).Should().BeTrue();
+            verificationContext.CheckTransaction(tx, conflicts, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().BeTrue();
             verificationContext.AddTransaction(tx);
-            verificationContext.CheckTransaction(tx, conflicts, snapshotCache).Should().BeTrue();
+            verificationContext.CheckTransaction(tx, conflicts, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().BeTrue();
             verificationContext.AddTransaction(tx);
-            verificationContext.CheckTransaction(tx, conflicts, snapshotCache).Should().BeFalse();
+            verificationContext.CheckTransaction(tx, conflicts, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().BeFalse();
             verificationContext.RemoveTransaction(tx);
-            verificationContext.CheckTransaction(tx, conflicts, snapshotCache).Should().BeTrue();
+            verificationContext.CheckTransaction(tx, conflicts, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().BeTrue();
             verificationContext.AddTransaction(tx);
-            verificationContext.CheckTransaction(tx, conflicts, snapshotCache).Should().BeFalse();
+            verificationContext.CheckTransaction(tx, conflicts, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().BeFalse();
         }
 
         [TestMethod]
         public async Task TestTransactionSenderFeeWithConflicts()
         {
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
-            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
-            BigInteger balance = NativeContract.GAS.BalanceOf(snapshotCache, UInt160.Zero);
-            await NativeContract.GAS.Burn(engine, UInt160.Zero, balance);
-            _ = NativeContract.GAS.Mint(engine, UInt160.Zero, 3 + 3 + 1, true); // balance is enough for 2 transactions and 1 GAS is left.
+            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
+            BigInteger balance = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.BalanceOf(snapshotCache, UInt160.Zero);
+            await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(engine, UInt160.Zero, balance);
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(engine, UInt160.Zero, 3 + 3 + 1, true); // balance is enough for 2 transactions and 1 GAS is left.
 
             TransactionVerificationContext verificationContext = new();
             var tx = CreateTransactionWithFee(1, 2);
             var conflictingTx = CreateTransactionWithFee(1, 1); // costs 2 GAS
 
             var conflicts = new List<Transaction>();
-            verificationContext.CheckTransaction(tx, conflicts, snapshotCache).Should().BeTrue();
+            verificationContext.CheckTransaction(tx, conflicts, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().BeTrue();
             verificationContext.AddTransaction(tx);
-            verificationContext.CheckTransaction(tx, conflicts, snapshotCache).Should().BeTrue();
+            verificationContext.CheckTransaction(tx, conflicts, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().BeTrue();
             verificationContext.AddTransaction(tx);
-            verificationContext.CheckTransaction(tx, conflicts, snapshotCache).Should().BeFalse();
+            verificationContext.CheckTransaction(tx, conflicts, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().BeFalse();
 
             conflicts.Add(conflictingTx);
-            verificationContext.CheckTransaction(tx, conflicts, snapshotCache).Should().BeTrue(); // 1 GAS is left on the balance + 2 GAS is free after conflicts removal => enough for one more trasnaction.
+            verificationContext.CheckTransaction(tx, conflicts, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().BeTrue(); // 1 GAS is left on the balance + 2 GAS is free after conflicts removal => enough for one more trasnaction.
         }
     }
 }

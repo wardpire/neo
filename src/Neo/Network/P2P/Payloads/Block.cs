@@ -15,6 +15,7 @@ using Neo.IO;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Persistence;
+using Neo.SmartContract.Native;
 using System;
 using System.IO;
 using System.Linq;
@@ -116,7 +117,7 @@ namespace Neo.Network.P2P.Payloads
             return Hash.GetHashCode();
         }
 
-        UInt160[] IVerifiable.GetScriptHashesForVerifying(DataCache snapshot) => ((IVerifiable)Header).GetScriptHashesForVerifying(snapshot);
+        UInt160[] IVerifiable.GetScriptHashesForVerifying(DataCache snapshot, NativeContractRepository nativeContractRepository) => ((IVerifiable)Header).GetScriptHashesForVerifying(snapshot,nativeContractRepository);
 
         public void Serialize(BinaryWriter writer)
         {
@@ -139,14 +140,14 @@ namespace Neo.Network.P2P.Payloads
             return json;
         }
 
-        internal bool Verify(ProtocolSettings settings, DataCache snapshot)
+        internal bool Verify(ProtocolSettings settings, DataCache snapshot, NativeContractRepository nativeContractRepository)
         {
-            return Header.Verify(settings, snapshot);
+            return Header.Verify(settings, snapshot, nativeContractRepository);
         }
 
-        internal bool Verify(ProtocolSettings settings, DataCache snapshot, HeaderCache headerCache)
+        internal bool Verify(ProtocolSettings settings, DataCache snapshot, HeaderCache headerCache, NativeContractRepository nativeContractRepository)
         {
-            return Header.Verify(settings, snapshot, headerCache);
+            return Header.Verify(settings, snapshot, headerCache, nativeContractRepository);
         }
     }
 }

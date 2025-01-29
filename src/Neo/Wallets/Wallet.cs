@@ -39,6 +39,7 @@ namespace Neo.Wallets
     public abstract class Wallet
     {
         private static readonly List<IWalletFactory> factories = new() { NEP6WalletFactory.Instance };
+        protected readonly NativeContractRepository _nativeContractRepository;
 
         /// <summary>
         /// The <see cref="Neo.ProtocolSettings"/> to be used by the wallet.
@@ -127,9 +128,10 @@ namespace Neo.Wallets
         /// </summary>
         /// <param name="path">The path of the wallet file.</param>
         /// <param name="settings">The <see cref="Neo.ProtocolSettings"/> to be used by the wallet.</param>
-        protected Wallet(string path, ProtocolSettings settings)
+        protected Wallet(string path, ProtocolSettings settings, NativeContractRepository nativeContractRepository)
         {
             ProtocolSettings = settings;
+            _nativeContractRepository = nativeContractRepository;
             Path = path;
         }
 
@@ -292,7 +294,7 @@ namespace Neo.Wallets
                 sb.EmitDynamicCall(asset_id, "decimals", CallFlags.ReadOnly);
                 script = sb.ToArray();
             }
-            using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, settings: ProtocolSettings, gas: 0_60000000L * accounts.Length);
+            using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, _nativeContractRepository, settings: ProtocolSettings, gas: 0_60000000L * accounts.Length);
             if (engine.State == VMState.FAULT)
                 return new BigDecimal(BigInteger.Zero, 0);
             byte decimals = (byte)engine.ResultStack.Pop().GetInteger();
@@ -490,7 +492,7 @@ namespace Neo.Wallets
                     {
                         using ScriptBuilder sb2 = new();
                         sb2.EmitDynamicCall(assetId, "balanceOf", CallFlags.ReadOnly, account);
-                        using ApplicationEngine engine = ApplicationEngine.Run(sb2.ToArray(), snapshot, settings: ProtocolSettings, persistingBlock: persistingBlock);
+                        using ApplicationEngine engine = ApplicationEngine.Run(sb2.ToArray(), snapshot, _nativeContractRepository, settings: ProtocolSettings, persistingBlock: persistingBlock);
                         if (engine.State != VMState.HALT)
                             throw new InvalidOperationException($"Execution for {assetId}.balanceOf('{account}' fault");
                         BigInteger value = engine.ResultStack.Pop().GetInteger();
@@ -522,13 +524,13 @@ namespace Neo.Wallets
                             sb.Emit(OpCode.ASSERT);
                         }
                     }
-                    if (assetId.Equals(NativeContract.GAS.Hash))
+                    if (assetId.Equals(_nativeContractRepository.GAS.Hash))
                         balances_gas = balances;
                 }
                 script = sb.ToArray();
             }
             if (balances_gas is null)
-                balances_gas = accounts.Select(p => (Account: p, Value: NativeContract.GAS.BalanceOf(snapshot, p))).Where(p => p.Value.Sign > 0).ToList();
+                balances_gas = accounts.Select(p => (Account: p, Value: _nativeContractRepository.GAS.BalanceOf(snapshot, p))).Where(p => p.Value.Sign > 0).ToList();
 
             return MakeTransaction(snapshot, script, cosignerList.Values.ToArray(), Array.Empty<TransactionAttribute>(), balances_gas, persistingBlock: persistingBlock);
         }
@@ -555,7 +557,7 @@ namespace Neo.Wallets
             {
                 accounts = new[] { sender };
             }
-            var balances_gas = accounts.Select(p => (Account: p, Value: NativeContract.GAS.BalanceOf(snapshot, p))).Where(p => p.Value.Sign > 0).ToList();
+            var balances_gas = accounts.Select(p => (Account: p, Value: _nativeContractRepository.GAS.BalanceOf(snapshot, p))).Where(p => p.Value.Sign > 0).ToList();
             return MakeTransaction(snapshot, script, cosigners ?? Array.Empty<Signer>(), attributes ?? Array.Empty<TransactionAttribute>(), balances_gas, maxGas, persistingBlock: persistingBlock);
         }
 
@@ -569,13 +571,13 @@ namespace Neo.Wallets
                     Version = 0,
                     Nonce = (uint)rand.Next(),
                     Script = script,
-                    ValidUntilBlock = NativeContract.Ledger.CurrentIndex(snapshot) + ProtocolSettings.MaxValidUntilBlockIncrement,
+                    ValidUntilBlock = _nativeContractRepository.Ledger.CurrentIndex(snapshot) + ProtocolSettings.MaxValidUntilBlockIncrement,
                     Signers = GetSigners(account, cosigners),
                     Attributes = attributes,
                 };
 
                 // will try to execute 'transfer' script to check if it works
-                using (ApplicationEngine engine = ApplicationEngine.Run(script, snapshot.CloneCache(), tx, settings: ProtocolSettings, gas: maxGas, persistingBlock: persistingBlock))
+                using (ApplicationEngine engine = ApplicationEngine.Run(script, snapshot.CloneCache(), _nativeContractRepository, settings: ProtocolSettings, gas: maxGas, persistingBlock: persistingBlock))
                 {
                     if (engine.State == VMState.FAULT)
                     {
@@ -584,7 +586,7 @@ namespace Neo.Wallets
                     tx.SystemFee = engine.FeeConsumed;
                 }
 
-                tx.NetworkFee = tx.CalculateNetworkFee(snapshot, ProtocolSettings, (a) => GetAccount(a)?.Contract?.Script, maxGas);
+                tx.NetworkFee = tx.CalculateNetworkFee(snapshot, ProtocolSettings, _nativeContractRepository, (a) => GetAccount(a)?.Contract?.Script, maxGas);
                 if (value >= tx.SystemFee + tx.NetworkFee) return tx;
             }
             throw new InvalidOperationException("Insufficient GAS");
@@ -636,7 +638,7 @@ namespace Neo.Wallets
 
                 // Try Smart contract verification
 
-                var contract = NativeContract.ContractManagement.GetContract(context.SnapshotCache, scriptHash);
+                var contract = _nativeContractRepository.ContractManagement.GetContract(context.SnapshotCache, scriptHash);
 
                 if (contract != null)
                 {
@@ -666,14 +668,14 @@ namespace Neo.Wallets
         /// </summary>
         public abstract void Save();
 
-        public static Wallet Create(string name, string path, string password, ProtocolSettings settings)
+        public static Wallet Create(string name, string path, string password, ProtocolSettings settings, NativeContractRepository nativeContractRepository)
         {
-            return GetFactory(path)?.CreateWallet(name, path, password, settings);
+            return GetFactory(path)?.CreateWallet(name, path, password, settings, nativeContractRepository);
         }
 
-        public static Wallet Open(string path, string password, ProtocolSettings settings)
+        public static Wallet Open(string path, string password, ProtocolSettings settings, NativeContractRepository nativeContractRepository)
         {
-            return GetFactory(path)?.OpenWallet(path, password, settings);
+            return GetFactory(path)?.OpenWallet(path, password, settings, nativeContractRepository);
         }
 
         /// <summary>
@@ -684,7 +686,7 @@ namespace Neo.Wallets
         /// <param name="oldPath">The path of the old wallet file.</param>
         /// <param name="settings">The <see cref="ProtocolSettings"/> to be used by the wallet.</param>
         /// <returns>The created new wallet.</returns>
-        public static Wallet Migrate(string path, string oldPath, string password, ProtocolSettings settings)
+        public static Wallet Migrate(string path, string oldPath, string password, ProtocolSettings settings, NativeContractRepository nativeContractRepository)
         {
             IWalletFactory factoryOld = GetFactory(oldPath);
             if (factoryOld is null)
@@ -693,8 +695,8 @@ namespace Neo.Wallets
             if (factoryNew is null)
                 throw new InvalidOperationException("The new wallet file format is not supported.");
 
-            Wallet oldWallet = factoryOld.OpenWallet(oldPath, password, settings);
-            Wallet newWallet = factoryNew.CreateWallet(oldWallet.Name, path, password, settings);
+            Wallet oldWallet = factoryOld.OpenWallet(oldPath, password, settings, nativeContractRepository);
+            Wallet newWallet = factoryNew.CreateWallet(oldWallet.Name, path, password, settings, nativeContractRepository);
 
             foreach (WalletAccount account in oldWallet.GetAccounts())
             {

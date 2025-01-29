@@ -125,9 +125,9 @@ namespace Neo.UnitTests.SmartContract
             nef.CheckSum = NefFile.ComputeChecksum(nef);
             var nefFile = nef.ToArray();
             var manifest = TestUtils.CreateDefaultManifest();
-            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.DeployContract(null, nefFile, manifest.ToJson().ToByteArray(false)));
-            Assert.ThrowsException<ArgumentException>(() => snapshotCache.DeployContract(UInt160.Zero, nefFile, new byte[ContractManifest.MaxLength + 1]));
-            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.DeployContract(UInt160.Zero, nefFile, manifest.ToJson().ToByteArray(true), 10000000));
+            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.DeployContract(null, nefFile, manifest.ToJson().ToByteArray(false), TestBlockchain.TheNeoSystem.NativeContractRepository));
+            Assert.ThrowsException<ArgumentException>(() => snapshotCache.DeployContract(UInt160.Zero, nefFile, new byte[ContractManifest.MaxLength + 1], TestBlockchain.TheNeoSystem.NativeContractRepository));
+            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.DeployContract(UInt160.Zero, nefFile, manifest.ToJson().ToByteArray(true), TestBlockchain.TheNeoSystem.NativeContractRepository, 10000000));
 
             var script_exceedMaxLength = new NefFile()
             {
@@ -139,23 +139,23 @@ namespace Neo.UnitTests.SmartContract
             script_exceedMaxLength.CheckSum = NefFile.ComputeChecksum(script_exceedMaxLength);
 
             Assert.ThrowsException<FormatException>(() => script_exceedMaxLength.ToArray().AsSerializable<NefFile>());
-            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.DeployContract(UInt160.Zero, script_exceedMaxLength.ToArray(), manifest.ToJson().ToByteArray(true)));
+            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.DeployContract(UInt160.Zero, script_exceedMaxLength.ToArray(), manifest.ToJson().ToByteArray(true), TestBlockchain.TheNeoSystem.NativeContractRepository));
 
             var script_zeroLength = System.Array.Empty<byte>();
-            Assert.ThrowsException<ArgumentException>(() => snapshotCache.DeployContract(UInt160.Zero, script_zeroLength, manifest.ToJson().ToByteArray(true)));
+            Assert.ThrowsException<ArgumentException>(() => snapshotCache.DeployContract(UInt160.Zero, script_zeroLength, manifest.ToJson().ToByteArray(true), TestBlockchain.TheNeoSystem.NativeContractRepository));
 
             var manifest_zeroLength = System.Array.Empty<byte>();
-            Assert.ThrowsException<ArgumentException>(() => snapshotCache.DeployContract(UInt160.Zero, nefFile, manifest_zeroLength));
+            Assert.ThrowsException<ArgumentException>(() => snapshotCache.DeployContract(UInt160.Zero, nefFile, manifest_zeroLength, TestBlockchain.TheNeoSystem.NativeContractRepository));
 
             manifest = TestUtils.CreateDefaultManifest();
-            var ret = snapshotCache.DeployContract(UInt160.Zero, nefFile, manifest.ToJson().ToByteArray(false));
+            var ret = snapshotCache.DeployContract(UInt160.Zero, nefFile, manifest.ToJson().ToByteArray(false), TestBlockchain.TheNeoSystem.NativeContractRepository);
             ret.Hash.ToString().Should().Be("0x7b37d4bd3d87f53825c3554bd1a617318235a685");
-            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.DeployContract(UInt160.Zero, nefFile, manifest.ToJson().ToByteArray(false)));
+            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.DeployContract(UInt160.Zero, nefFile, manifest.ToJson().ToByteArray(false), TestBlockchain.TheNeoSystem.NativeContractRepository));
 
             var state = TestUtils.GetContract();
-            snapshotCache.AddContract(state.Hash, state);
+            snapshotCache.AddContract(state.Hash, state, TestBlockchain.TheNeoSystem.NativeContractRepository);
 
-            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.DeployContract(UInt160.Zero, nefFile, manifest.ToJson().ToByteArray(false)));
+            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.DeployContract(UInt160.Zero, nefFile, manifest.ToJson().ToByteArray(false), TestBlockchain.TheNeoSystem.NativeContractRepository));
         }
 
         [TestMethod]
@@ -170,7 +170,7 @@ namespace Neo.UnitTests.SmartContract
                 Tokens = Array.Empty<MethodToken>()
             };
             nef.CheckSum = NefFile.ComputeChecksum(nef);
-            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.UpdateContract(null, nef.ToArray(), new byte[0]));
+            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.UpdateContract(null, nef.ToArray(), new byte[0], TestBlockchain.TheNeoSystem.NativeContractRepository));
 
             var manifest = TestUtils.CreateDefaultManifest();
             byte[] privkey = { 0x01,0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
@@ -198,11 +198,11 @@ namespace Neo.UnitTests.SmartContract
                 Id = state.Id,
                 Key = new byte[] { 0x01 }
             };
-            snapshotCache.AddContract(state.Hash, state);
+            snapshotCache.AddContract(state.Hash, state, TestBlockchain.TheNeoSystem.NativeContractRepository);
             snapshotCache.Add(storageKey, storageItem);
             state.UpdateCounter.Should().Be(0);
-            snapshotCache.UpdateContract(state.Hash, nef.ToArray(), manifest.ToJson().ToByteArray(false));
-            var ret = NativeContract.ContractManagement.GetContract(snapshotCache, state.Hash);
+            snapshotCache.UpdateContract(state.Hash, nef.ToArray(), manifest.ToJson().ToByteArray(false), TestBlockchain.TheNeoSystem.NativeContractRepository);
+            var ret = TestBlockchain.TheNeoSystem.NativeContractRepository.ContractManagement.GetContract(snapshotCache, state.Hash);
             snapshotCache.Find(BitConverter.GetBytes(state.Id)).ToList().Count().Should().Be(1);
             ret.UpdateCounter.Should().Be(1);
             ret.Id.Should().Be(state.Id);
@@ -224,9 +224,9 @@ namespace Neo.UnitTests.SmartContract
 
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
 
-            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.UpdateContract(null, null, new byte[] { 0x01 }));
-            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.UpdateContract(null, nefFile.ToArray(), null));
-            Assert.ThrowsException<ArgumentException>(() => snapshotCache.UpdateContract(null, null, null));
+            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.UpdateContract(null, null, new byte[] { 0x01 }, TestBlockchain.TheNeoSystem.NativeContractRepository));
+            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.UpdateContract(null, nefFile.ToArray(), null, TestBlockchain.TheNeoSystem.NativeContractRepository));
+            Assert.ThrowsException<ArgumentException>(() => snapshotCache.UpdateContract(null, null, null, TestBlockchain.TheNeoSystem.NativeContractRepository));
 
             nefFile = new NefFile()
             {
@@ -237,8 +237,8 @@ namespace Neo.UnitTests.SmartContract
             };
             nefFile.CheckSum = NefFile.ComputeChecksum(nefFile);
 
-            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.UpdateContract(null, nefFile.ToArray(), new byte[] { 0x01 }));
-            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.UpdateContract(null, nefFile.ToArray(), new byte[0]));
+            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.UpdateContract(null, nefFile.ToArray(), new byte[] { 0x01 }, TestBlockchain.TheNeoSystem.NativeContractRepository));
+            Assert.ThrowsException<InvalidOperationException>(() => snapshotCache.UpdateContract(null, nefFile.ToArray(), new byte[0], TestBlockchain.TheNeoSystem.NativeContractRepository));
         }
 
         [TestMethod]
@@ -256,9 +256,9 @@ namespace Neo.UnitTests.SmartContract
                 Id = state.Id,
                 Key = new byte[] { 0x01 }
             };
-            snapshotCache.AddContract(state.Hash, state);
+            snapshotCache.AddContract(state.Hash, state, TestBlockchain.TheNeoSystem.NativeContractRepository);
             snapshotCache.Add(storageKey, storageItem);
-            var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache);
+            var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository);
             engine.LoadScript(new byte[] { 0x01 });
 
             var iterator = engine.Find(new StorageContext

@@ -46,8 +46,8 @@ namespace Neo.Plugins.RpcServer.Tests
         {
             _memoryStore = new MemoryStore();
             _memoryStoreProvider = new TestMemoryStoreProvider(_memoryStore);
-            _neoSystem = new NeoSystem(TestProtocolSettings.SoleNode, _memoryStoreProvider);
-            _rpcServerSettings = RpcServerSettings.Default with
+            _neoSystem = new NeoSystem(TestProtocolSettings.SoleNode, TestBlockchain.TheNeoSystem.PluginRepository, _memoryStoreProvider, TestBlockchain.TheNeoSystem.NativeContractRepository);
+            _rpcServerSettings = RpcServerSettings.GetDefault(TestBlockchain.TheNeoSystem.NativeContractRepository) with
             {
                 SessionEnabled = true,
                 SessionExpirationTime = TimeSpan.FromSeconds(0.3),
@@ -56,10 +56,10 @@ namespace Neo.Plugins.RpcServer.Tests
             };
             _rpcServer = new RpcServer(_neoSystem, _rpcServerSettings);
             _walletAccount = _wallet.Import("KxuRSsHgJMb3AMSN6B9P3JHNGMFtxmuimqgR9MmXPcv3CLLfusTd");
-            var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(_walletAccount.ScriptHash);
+            var key = new KeyBuilder(TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Id, 20).Add(_walletAccount.ScriptHash);
             var snapshot = _neoSystem.GetSnapshotCache();
             var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
-            entry.GetInteroperable<AccountState>().Balance = 100_000_000 * NativeContract.GAS.Factor;
+            entry.GetInteroperable<AccountState>().Balance = 100_000_000 * TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Factor;
             snapshot.Commit();
         }
 
@@ -70,9 +70,9 @@ namespace Neo.Plugins.RpcServer.Tests
             _neoSystem.MemPool.Clear();
             _memoryStore.Reset();
             var snapshot = _neoSystem.GetSnapshotCache();
-            var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(_walletAccount.ScriptHash);
+            var key = new KeyBuilder(TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Id, 20).Add(_walletAccount.ScriptHash);
             var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
-            entry.GetInteroperable<AccountState>().Balance = 100_000_000 * NativeContract.GAS.Factor;
+            entry.GetInteroperable<AccountState>().Balance = 100_000_000 * TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Factor;
             snapshot.Commit();
         }
 
@@ -92,8 +92,8 @@ namespace Neo.Plugins.RpcServer.Tests
         public void TestCheckAuth()
         {
             var memoryStoreProvider = new TestMemoryStoreProvider(new MemoryStore());
-            var neoSystem = new NeoSystem(TestProtocolSettings.SoleNode, memoryStoreProvider);
-            var rpcServerSettings = RpcServerSettings.Default with
+            var neoSystem = new NeoSystem(TestProtocolSettings.SoleNode, TestBlockchain.TheNeoSystem.PluginRepository, memoryStoreProvider, TestBlockchain.TheNeoSystem.NativeContractRepository);
+            var rpcServerSettings = RpcServerSettings.GetDefault(TestBlockchain.TheNeoSystem.NativeContractRepository) with
             {
                 SessionEnabled = true,
                 SessionExpirationTime = TimeSpan.FromSeconds(0.3),

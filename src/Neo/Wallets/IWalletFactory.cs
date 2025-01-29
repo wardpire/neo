@@ -9,14 +9,16 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.SmartContract.Native;
+
 namespace Neo.Wallets
 {
     public interface IWalletFactory
     {
         public bool Handle(string path);
 
-        public Wallet CreateWallet(string name, string path, string password, ProtocolSettings settings);
+        public Wallet CreateWallet(string name, string path, string password, ProtocolSettings settings, NativeContractRepository nativeContractRepository);
 
-        public Wallet OpenWallet(string path, string password, ProtocolSettings settings);
+        public Wallet OpenWallet(string path, string password, ProtocolSettings settings, NativeContractRepository nativeContractRepository);
     }
 }

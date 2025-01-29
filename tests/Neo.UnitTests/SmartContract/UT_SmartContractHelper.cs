@@ -140,7 +140,7 @@ namespace Neo.UnitTests.SmartContract
                 Hashes = new UInt256[1] { UInt256.Zero },
             });
             TestUtils.BlocksDelete(snapshotCache1, index1);
-            Assert.AreEqual(false, Neo.SmartContract.Helper.VerifyWitnesses(new Header() { PrevHash = index1 }, TestProtocolSettings.Default, snapshotCache1, 100));
+            Assert.AreEqual(false, Neo.SmartContract.Helper.VerifyWitnesses(new Header() { PrevHash = index1 }, TestProtocolSettings.Default, TestBlockchain.TheNeoSystem.NativeContractRepository, snapshotCache1, 100));
 
             var snapshotCache2 = TestBlockchain.GetTestSnapshotCache();
             UInt256 index2 = UInt256.Parse("0xa400ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff01");
@@ -159,9 +159,9 @@ namespace Neo.UnitTests.SmartContract
             TestUtils.BlocksAdd(snapshotCache2, index2, block2);
             Header header2 = new() { PrevHash = index2, Witness = new Witness { InvocationScript = Array.Empty<byte>(), VerificationScript = Array.Empty<byte>() } };
 
-            snapshotCache2.AddContract(UInt160.Zero, new ContractState());
-            snapshotCache2.DeleteContract(UInt160.Zero);
-            Assert.AreEqual(false, Neo.SmartContract.Helper.VerifyWitnesses(header2, TestProtocolSettings.Default, snapshotCache2, 100));
+            snapshotCache2.AddContract(UInt160.Zero, new ContractState(), TestBlockchain.TheNeoSystem.NativeContractRepository);
+            snapshotCache2.DeleteContract(UInt160.Zero, TestBlockchain.TheNeoSystem.NativeContractRepository);
+            Assert.AreEqual(false, Neo.SmartContract.Helper.VerifyWitnesses(header2, TestProtocolSettings.Default, TestBlockchain.TheNeoSystem.NativeContractRepository, snapshotCache2, 100));
 
             var snapshotCache3 = TestBlockchain.GetTestSnapshotCache();
             UInt256 index3 = UInt256.Parse("0xa400ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff01");
@@ -192,8 +192,8 @@ namespace Neo.UnitTests.SmartContract
                 Nef = new NefFile { Script = Array.Empty<byte>() },
                 Hash = Array.Empty<byte>().ToScriptHash(),
                 Manifest = TestUtils.CreateManifest("verify", ContractParameterType.Boolean, ContractParameterType.Signature),
-            });
-            Assert.AreEqual(false, Neo.SmartContract.Helper.VerifyWitnesses(header3, TestProtocolSettings.Default, snapshotCache3, 100));
+            }, TestBlockchain.TheNeoSystem.NativeContractRepository);
+            Assert.AreEqual(false, Neo.SmartContract.Helper.VerifyWitnesses(header3, TestProtocolSettings.Default, TestBlockchain.TheNeoSystem.NativeContractRepository, snapshotCache3, 100));
 
             // Smart contract verification
 
@@ -203,13 +203,13 @@ namespace Neo.UnitTests.SmartContract
                 Hash = "11".HexToBytes().ToScriptHash(),
                 Manifest = TestUtils.CreateManifest("verify", ContractParameterType.Boolean, ContractParameterType.Signature), // Offset = 0
             };
-            snapshotCache3.AddContract(contract.Hash, contract);
+            snapshotCache3.AddContract(contract.Hash, contract, TestBlockchain.TheNeoSystem.NativeContractRepository);
             var tx = new Nep17NativeContractExtensions.ManualWitness(contract.Hash)
             {
                 Witnesses = new Witness[] { new Witness() { InvocationScript = Array.Empty<byte>(), VerificationScript = Array.Empty<byte>() } }
             };
 
-            Assert.AreEqual(true, Neo.SmartContract.Helper.VerifyWitnesses(tx, TestProtocolSettings.Default, snapshotCache3, 1000));
+            Assert.AreEqual(true, Neo.SmartContract.Helper.VerifyWitnesses(tx, TestProtocolSettings.Default, TestBlockchain.TheNeoSystem.NativeContractRepository, snapshotCache3, 1000));
         }
     }
 }

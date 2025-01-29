@@ -89,7 +89,7 @@ namespace Neo.UnitTests.VMT
             var sb = new ScriptBuilder();
             sb.CreateArray(expected);
 
-            using var engine = ApplicationEngine.Create(TriggerType.Application, null, null);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, null, TestBlockchain.TheNeoSystem.NativeContractRepository);
             engine.LoadScript(sb.ToArray());
             Assert.AreEqual(VMState.HALT, engine.Execute());
 
@@ -99,7 +99,7 @@ namespace Neo.UnitTests.VMT
             sb = new ScriptBuilder();
             sb.CreateArray(expected);
 
-            using var engine2 = ApplicationEngine.Create(TriggerType.Application, null, null);
+            using var engine2 = ApplicationEngine.Create(TriggerType.Application, null, null, TestBlockchain.TheNeoSystem.NativeContractRepository);
             engine2.LoadScript(sb.ToArray());
             Assert.AreEqual(VMState.HALT, engine2.Execute());
 
@@ -113,7 +113,7 @@ namespace Neo.UnitTests.VMT
             var sb = new ScriptBuilder();
             sb.CreateStruct(expected);
 
-            using var engine = ApplicationEngine.Create(TriggerType.Application, null, null);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, null, TestBlockchain.TheNeoSystem.NativeContractRepository);
             engine.LoadScript(sb.ToArray());
             Assert.AreEqual(VMState.HALT, engine.Execute());
 
@@ -123,7 +123,7 @@ namespace Neo.UnitTests.VMT
             sb = new ScriptBuilder();
             sb.CreateStruct(expected);
 
-            using var engine2 = ApplicationEngine.Create(TriggerType.Application, null, null);
+            using var engine2 = ApplicationEngine.Create(TriggerType.Application, null, null, TestBlockchain.TheNeoSystem.NativeContractRepository);
             engine2.LoadScript(sb.ToArray());
             Assert.AreEqual(VMState.HALT, engine2.Execute());
 
@@ -137,7 +137,7 @@ namespace Neo.UnitTests.VMT
             var sb = new ScriptBuilder();
             sb.CreateMap(expected);
 
-            using var engine = ApplicationEngine.Create(TriggerType.Application, null, null);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, null, TestBlockchain.TheNeoSystem.NativeContractRepository);
             engine.LoadScript(sb.ToArray());
             Assert.AreEqual(VMState.HALT, engine.Execute());
 
@@ -195,7 +195,7 @@ namespace Neo.UnitTests.VMT
         [TestMethod]
         public void TestMakeScript()
         {
-            byte[] testScript = NativeContract.GAS.Hash.MakeScript("balanceOf", UInt160.Zero);
+            byte[] testScript = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Hash.MakeScript("balanceOf", UInt160.Zero);
 
             Assert.AreEqual("0c14000000000000000000000000000000000000000011c01f0c0962616c616e63654f660c14cf76e28bd0062c4a478ee35561011319f3cfa4d241627d5b52",
                             testScript.ToHexString());

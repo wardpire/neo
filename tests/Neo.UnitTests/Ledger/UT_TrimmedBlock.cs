@@ -76,7 +76,7 @@ namespace Neo.UnitTests.Ledger
             tblock.Hashes = new UInt256[] { tx1.Hash, tx2.Hash };
             TestUtils.BlocksAdd(snapshotCache, tblock.Hash, tblock);
 
-            Block block = NativeContract.Ledger.GetBlock(snapshotCache, tblock.Hash);
+            Block block = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.GetBlock(snapshotCache, tblock.Hash);
 
             block.Index.Should().Be(1);
             block.MerkleRoot.Should().Be(UInt256.Parse("0xa400ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff02"));

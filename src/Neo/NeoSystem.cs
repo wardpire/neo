@@ -96,6 +96,8 @@ namespace Neo
         /// </summary>
         public HeaderCache HeaderCache { get; } = new();
 
+        public NativeContractRepository NativeContractRepository { get; init; }
+
         internal RelayCache RelayCache { get; } = new(100);
 
         private ImmutableList<object> services = ImmutableList<object>.Empty;
@@ -104,7 +106,7 @@ namespace Neo
         private ChannelsConfig start_message = null;
         private int suspend = 0;
 
-        private PluginRepository pluginRepository;
+        public PluginRepository PluginRepository { get; init; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NeoSystem"/> class.
@@ -115,11 +117,13 @@ namespace Neo
         public NeoSystem(
             ProtocolSettings settings,
             PluginRepository pluginRepository,
+            NativeContractRepository? nativeContractRepository = null,
             string? storageProvider = null,
             string? storagePath = null) : this(
                 settings,
                 pluginRepository,
                 pluginRepository.GetStoreProvider(storageProvider ?? nameof(MemoryStore)) ?? throw new ArgumentException($"Can't find the storage provider {storageProvider}", nameof(storageProvider)),
+                nativeContractRepository,
                 storagePath)
         {
         }
@@ -134,12 +138,14 @@ namespace Neo
             ProtocolSettings settings,
             PluginRepository pluginRepository,
             IStoreProvider storageProvider,
+            NativeContractRepository? nativeContractRepository = null,
             string? storagePath = null)
         {
             Settings = settings;
             GenesisBlock = CreateGenesisBlock(settings);
             this.storageProvider = storageProvider;
-            this.pluginRepository = pluginRepository;
+            this.PluginRepository = pluginRepository;
+            this.NativeContractRepository = nativeContractRepository ?? new NativeContractRepository();
             store = storageProvider.GetStore(storagePath);
             MemPool = new MemoryPool(this);
             Blockchain = ActorSystem.ActorOf(Ledger.Blockchain.Props(this));
@@ -180,7 +186,7 @@ namespace Neo
         {
             EnsureStopped(LocalNode);
             EnsureStopped(Blockchain);
-            foreach (var p in pluginRepository.Plugins)
+            foreach (var p in PluginRepository.Plugins)
                 p.Dispose();
             // Dispose will call ActorSystem.Terminate()
             ActorSystem.Dispose();
@@ -303,7 +309,7 @@ namespace Neo
         public ContainsTransactionType ContainsTransaction(UInt256 hash)
         {
             if (MemPool.ContainsKey(hash)) return ContainsTransactionType.ExistsInPool;
-            return NativeContract.Ledger.ContainsTransaction(StoreView, hash) ?
+            return NativeContractRepository.Ledger.ContainsTransaction(StoreView, hash) ?
                 ContainsTransactionType.ExistsInLedger : ContainsTransactionType.NotExist;
         }
 
@@ -315,7 +321,7 @@ namespace Neo
         /// <returns><see langword="true"/> if the transaction conflicts with on-chain transaction; otherwise, <see langword="false"/>.</returns>
         public bool ContainsConflictHash(UInt256 hash, IEnumerable<UInt160> signers)
         {
-            return NativeContract.Ledger.ContainsConflictHash(StoreView, hash, signers, Settings.MaxTraceableBlocks);
+            return NativeContractRepository.Ledger.ContainsConflictHash(StoreView, hash, signers, Settings.MaxTraceableBlocks);
         }
     }
 }

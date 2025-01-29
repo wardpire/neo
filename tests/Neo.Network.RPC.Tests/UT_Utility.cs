@@ -28,6 +28,7 @@ namespace Neo.Network.RPC.Tests
         private KeyPair keyPair;
         private UInt160 scriptHash;
         private ProtocolSettings protocolSettings;
+        private NativeContractRepository nativeContractRepository;
 
         [TestInitialize]
         public void TestSetup()
@@ -35,14 +36,15 @@ namespace Neo.Network.RPC.Tests
             keyPair = new KeyPair(Wallet.GetPrivateKeyFromWIF("KyXwTh1hB76RRMquSvnxZrJzQx7h9nQP2PCRL38v6VDb5ip3nf1p"));
             scriptHash = Contract.CreateSignatureRedeemScript(keyPair.PublicKey).ToScriptHash();
             protocolSettings = ProtocolSettings.Load("protocol.json");
+            nativeContractRepository = new NativeContractRepository();
         }
 
         [TestMethod]
         public void TestAsScriptHash()
         {
-            var scriptHash1 = Utility.AsScriptHash(NativeContract.NEO.Id.ToString());
-            var scriptHash2 = Utility.AsScriptHash(NativeContract.NEO.Hash.ToString());
-            var scriptHash3 = Utility.AsScriptHash(NativeContract.NEO.Name);
+            var scriptHash1 = Utility.AsScriptHash(nativeContractRepository.NEO.Id.ToString(), nativeContractRepository);
+            var scriptHash2 = Utility.AsScriptHash(nativeContractRepository.NEO.Hash.ToString(), nativeContractRepository);
+            var scriptHash3 = Utility.AsScriptHash(nativeContractRepository.NEO.Name, nativeContractRepository);
             scriptHash2.Should().Be(scriptHash1);
             scriptHash3.Should().Be(scriptHash1);
         }

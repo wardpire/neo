@@ -25,10 +25,19 @@ using System.Numerics;
 
 namespace Neo.SmartContract.Native
 {
+    public interface IContractManagement : INativeContract
+    {
+        ContractState GetContract(DataCache snapshot, UInt160 hash);
+        ContractState GetContractById(DataCache snapshot, int id);
+        bool HasMethod(DataCache snapshot, UInt160 hash, string method, int pcount);
+        IEnumerable<ContractState> ListContracts(DataCache snapshot);
+        internal ContractTask OnPersistAsync(ApplicationEngine engine);
+    }
+
     /// <summary>
     /// A native contract used to manage all deployed smart contracts.
     /// </summary>
-    public sealed class ContractManagement : NativeContract
+    public sealed class ContractManagement : NativeContract, IContractManagement
     {
         private const byte Prefix_MinimumDeploymentFee = 20;
         private const byte Prefix_NextAvailableId = 15;
@@ -38,7 +47,7 @@ namespace Neo.SmartContract.Native
         [ContractEvent(0, name: "Deploy", "Hash", ContractParameterType.Hash160)]
         [ContractEvent(1, name: "Update", "Hash", ContractParameterType.Hash160)]
         [ContractEvent(2, name: "Destroy", "Hash", ContractParameterType.Hash160)]
-        internal ContractManagement() : base() { }
+        internal ContractManagement(NativeContractRepository repository) : base(repository) { }
 
         private int GetNextAvailableId(DataCache snapshot)
         {
@@ -66,9 +75,10 @@ namespace Neo.SmartContract.Native
             engine.SendNotification(Hash, update ? "Update" : "Deploy", new VM.Types.Array(engine.ReferenceCounter) { contract.Hash.ToArray() });
         }
 
+        ContractTask IContractManagement.OnPersistAsync(ApplicationEngine engine) => OnPersistAsync(engine);
         internal override async ContractTask OnPersistAsync(ApplicationEngine engine)
         {
-            foreach (NativeContract contract in Contracts)
+            foreach (NativeContract contract in _repository.Contracts)
             {
                 if (contract.IsInitializeBlock(engine.ProtocolSettings, engine.PersistingBlock.Index, out var hfs))
                 {
@@ -126,7 +136,7 @@ namespace Neo.SmartContract.Native
         private void SetMinimumDeploymentFee(ApplicationEngine engine, BigInteger value/* In the unit of datoshi, 1 datoshi = 1e-8 GAS*/)
         {
             if (value < 0) throw new ArgumentOutOfRangeException(nameof(value));
-            if (!CheckCommittee(engine)) throw new InvalidOperationException();
+            if (!_repository.CheckCommittee(engine)) throw new InvalidOperationException();
             engine.SnapshotCache.GetAndChange(CreateStorageKey(Prefix_MinimumDeploymentFee)).Set(value);
         }
 
@@ -229,7 +239,7 @@ namespace Neo.SmartContract.Native
             Helper.Check(new VM.Script(nef.Script, engine.IsHardforkEnabled(Hardfork.HF_Basilisk)), parsedManifest.Abi);
             UInt160 hash = Helper.GetContractHash(tx.Sender, nef.CheckSum, parsedManifest.Name);
 
-            if (Policy.IsBlocked(engine.SnapshotCache, hash))
+            if (_repository.Policy.IsBlocked(engine.SnapshotCache, hash))
                 throw new InvalidOperationException($"The contract {hash} has been blocked.");
 
             StorageKey key = CreateStorageKey(Prefix_Contract).Add(hash);
@@ -307,7 +317,7 @@ namespace Neo.SmartContract.Native
             foreach (var (key, _) in engine.SnapshotCache.Find(StorageKey.CreateSearchPrefix(contract.Id, ReadOnlySpan<byte>.Empty)))
                 engine.SnapshotCache.Delete(key);
             // lock contract
-            Policy.BlockAccount(engine.SnapshotCache, hash);
+            _repository.Policy.BlockAccount(engine.SnapshotCache, hash);
             // emit event
             engine.SendNotification(Hash, "Destroy", new VM.Types.Array(engine.ReferenceCounter) { hash.ToArray() });
         }

@@ -42,7 +42,7 @@ namespace Neo.Plugins.OracleService.Tests
             return new KeyBuilder(contract.Id, prefix).AddBigEndian(value);
         }
 
-        public static NEP6Wallet GenerateTestWallet(string password)
+        public static NEP6Wallet GenerateTestWallet(string password, NativeContractRepository nativeContractRepository)
         {
             JObject wallet = new JObject();
             wallet["name"] = "noname";
@@ -51,7 +51,7 @@ namespace Neo.Plugins.OracleService.Tests
             wallet["accounts"] = new JArray();
             wallet["extra"] = null;
             wallet.ToString().Should().Be("{\"name\":\"noname\",\"version\":\"1.0\",\"scrypt\":{\"n\":2,\"r\":1,\"p\":1},\"accounts\":[],\"extra\":null}");
-            return new NEP6Wallet(null, password, settings, wallet);
+            return new NEP6Wallet(null, password, settings, wallet, nativeContractRepository);
         }
     }
 }

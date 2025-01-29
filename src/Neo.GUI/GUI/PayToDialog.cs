@@ -27,7 +27,7 @@ namespace Neo.GUI
                 {
                     try
                     {
-                        comboBox1.Items.Add(new AssetDescriptor(Service.NeoSystem.StoreView, Service.NeoSystem.Settings, assetId));
+                        comboBox1.Items.Add(new AssetDescriptor(Service.NeoSystem.StoreView, Service.NeoSystem.Settings, assetId, Program.Service.NeoSystem.NativeContractRepository));
                     }
                     catch (ArgumentException)
                     {

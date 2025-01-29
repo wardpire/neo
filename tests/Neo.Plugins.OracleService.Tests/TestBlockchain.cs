@@ -43,8 +43,8 @@ namespace Neo.Plugins.OracleService.Tests
             Console.WriteLine("initialize NeoSystem");
             StoreProvider _memoryStoreProvider = new();
             s_oracle = new();
-            s_theNeoSystem = new NeoSystem(TestUtils.settings, _memoryStoreProvider);
-            s_wallet = TestUtils.GenerateTestWallet("123");
+            s_theNeoSystem = new NeoSystem(TestUtils.settings, new PluginRepository(), _memoryStoreProvider);
+            s_wallet = TestUtils.GenerateTestWallet("123", s_theNeoSystem.NativeContractRepository);
             s_walletAccount = s_wallet.Import("KxuRSsHgJMb3AMSN6B9P3JHNGMFtxmuimqgR9MmXPcv3CLLfusTd");
         }
 
@@ -72,20 +72,20 @@ public static void Callback(string url, byte[] userData, int code, byte[] result
             byte[] script;
             using (ScriptBuilder sb = new())
             {
-                sb.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", Convert.FromBase64String(base64NefFile), manifest);
+                sb.EmitDynamicCall(s_theNeoSystem.NativeContractRepository.ContractManagement.Hash, "deploy", Convert.FromBase64String(base64NefFile), manifest);
                 script = sb.ToArray();
             }
             SnapshotCache snapshot = s_theNeoSystem.GetSnapshotCache();
             Transaction? tx = new Transaction
             {
                 Nonce = 233,
-                ValidUntilBlock = NativeContract.Ledger.CurrentIndex(snapshot) + s_theNeoSystem.Settings.MaxValidUntilBlockIncrement,
+                ValidUntilBlock = s_theNeoSystem.NativeContractRepository.Ledger.CurrentIndex(snapshot) + s_theNeoSystem.Settings.MaxValidUntilBlockIncrement,
                 Signers = [new Signer() { Account = TestUtils.ValidatorScriptHash, Scopes = WitnessScope.CalledByEntry }],
                 Attributes = System.Array.Empty<TransactionAttribute>(),
                 Script = script,
                 Witnesses = null,
             };
-            var engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: s_theNeoSystem.Settings, gas: 1200_0000_0000);
+            var engine = ApplicationEngine.Run(tx.Script, snapshot, s_theNeoSystem.NativeContractRepository, container: tx, settings: s_theNeoSystem.Settings, gas: 1200_0000_0000);
             engine.SnapshotCache.Commit();
             var result = (Neo.VM.Types.Array)engine.ResultStack.Peek();
             return new UInt160(result[2].GetSpan());

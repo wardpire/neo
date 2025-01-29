@@ -128,7 +128,7 @@ namespace Neo.Plugins.ApplicationLogs
             UInt256 blockhash;
             if (uint.TryParse(blockHashOrIndex, out var blockIndex))
             {
-                blockhash = NativeContract.Ledger.GetBlockHash(_neosystem.StoreView, blockIndex);
+                blockhash = _neosystem.NativeContractRepository.Ledger.GetBlockHash(_neosystem.StoreView, blockIndex);
             }
             else if (UInt256.TryParse(blockHashOrIndex, out blockhash) == false)
             {
@@ -252,7 +252,7 @@ namespace Neo.Plugins.ApplicationLogs
                 ConsoleHelper.Error($"Exception: {model.Exception}");
             else
                 ConsoleHelper.Info("Exception: ", "null");
-            ConsoleHelper.Info("Gas Consumed: ", $"{new BigDecimal((BigInteger)model.GasConsumed, NativeContract.GAS.Decimals)}");
+            ConsoleHelper.Info("Gas Consumed: ", $"{new BigDecimal((BigInteger)model.GasConsumed, _neosystem.NativeContractRepository.GAS.Decimals)}");
             if (model.Stack.Length == 0)
                 ConsoleHelper.Info("Stack: ", "[]");
             else
@@ -311,7 +311,7 @@ namespace Neo.Plugins.ApplicationLogs
 
         private string GetMethodParameterName(UInt160 scriptHash, string methodName, uint ncount, int parameterIndex)
         {
-            var contract = NativeContract.ContractManagement.GetContract(_neosystem.StoreView, scriptHash);
+            var contract = _neosystem.NativeContractRepository.ContractManagement.GetContract(_neosystem.StoreView, scriptHash);
             if (contract == null)
                 return $"{parameterIndex}";
             var contractEvent = contract.Manifest.Abi.Events.SingleOrDefault(s => s.Name == methodName && (uint)s.Parameters.Length == ncount);

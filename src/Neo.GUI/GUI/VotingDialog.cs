@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.CLI;
 using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.SmartContract;
@@ -28,7 +29,7 @@ namespace Neo.GUI
         {
             ECPoint[] pubkeys = textBox1.Lines.Select(p => ECPoint.Parse(p, ECCurve.Secp256r1)).ToArray();
             using ScriptBuilder sb = new ScriptBuilder();
-            sb.EmitDynamicCall(NativeContract.NEO.Hash, "vote", new ContractParameter
+            sb.EmitDynamicCall(Program.Service.NeoSystem.NativeContractRepository.NEO.Hash, "vote", new ContractParameter
             {
                 Type = ContractParameterType.Hash160,
                 Value = script_hash

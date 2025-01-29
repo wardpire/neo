@@ -32,7 +32,7 @@ namespace Neo.Plugins.RpcServer
         [RpcMethodWithParams]
         protected internal virtual JToken GetBestBlockHash()
         {
-            return NativeContract.Ledger.CurrentHash(system.StoreView).ToString();
+            return system.NativeContractRepository.Ledger.CurrentHash(system.StoreView).ToString();
         }
 
         /// <summary>
@@ -46,13 +46,13 @@ namespace Neo.Plugins.RpcServer
         protected internal virtual JToken GetBlock(BlockHashOrIndex blockHashOrIndex, bool verbose = false)
         {
             using var snapshot = system.GetSnapshotCache();
-            var block = blockHashOrIndex.IsIndex ? NativeContract.Ledger.GetBlock(snapshot, blockHashOrIndex.AsIndex()) : NativeContract.Ledger.GetBlock(snapshot, blockHashOrIndex.AsHash());
+            var block = blockHashOrIndex.IsIndex ? system.NativeContractRepository.Ledger.GetBlock(snapshot, blockHashOrIndex.AsIndex()) : system.NativeContractRepository.Ledger.GetBlock(snapshot, blockHashOrIndex.AsHash());
             block.NotNull_Or(RpcError.UnknownBlock);
             if (verbose)
             {
                 JObject json = Utility.BlockToJson(block, system.Settings);
-                json["confirmations"] = NativeContract.Ledger.CurrentIndex(snapshot) - block.Index + 1;
-                UInt256 hash = NativeContract.Ledger.GetBlockHash(snapshot, block.Index + 1);
+                json["confirmations"] = system.NativeContractRepository.Ledger.CurrentIndex(snapshot) - block.Index + 1;
+                UInt256 hash = system.NativeContractRepository.Ledger.GetBlockHash(snapshot, block.Index + 1);
                 if (hash != null)
                     json["nextblockhash"] = hash.ToString();
                 return json;
@@ -67,7 +67,7 @@ namespace Neo.Plugins.RpcServer
         [RpcMethodWithParams]
         internal virtual JToken GetBlockHeaderCount()
         {
-            return (system.HeaderCache.Last?.Index ?? NativeContract.Ledger.CurrentIndex(system.StoreView)) + 1;
+            return (system.HeaderCache.Last?.Index ?? system.NativeContractRepository.Ledger.CurrentIndex(system.StoreView)) + 1;
         }
 
         /// <summary>
@@ -77,7 +77,7 @@ namespace Neo.Plugins.RpcServer
         [RpcMethodWithParams]
         protected internal virtual JToken GetBlockCount()
         {
-            return NativeContract.Ledger.CurrentIndex(system.StoreView) + 1;
+            return system.NativeContractRepository.Ledger.CurrentIndex(system.StoreView) + 1;
         }
 
         /// <summary>
@@ -89,9 +89,9 @@ namespace Neo.Plugins.RpcServer
         protected internal virtual JToken GetBlockHash(uint height)
         {
             var snapshot = system.StoreView;
-            if (height <= NativeContract.Ledger.CurrentIndex(snapshot))
+            if (height <= system.NativeContractRepository.Ledger.CurrentIndex(snapshot))
             {
-                return NativeContract.Ledger.GetBlockHash(snapshot, height).ToString();
+                return system.NativeContractRepository.Ledger.GetBlockHash(snapshot, height).ToString();
             }
             throw new RpcException(RpcError.UnknownHeight);
         }
@@ -114,17 +114,17 @@ namespace Neo.Plugins.RpcServer
             Header header;
             if (blockHashOrIndex.IsIndex)
             {
-                header = NativeContract.Ledger.GetHeader(snapshot, blockHashOrIndex.AsIndex()).NotNull_Or(RpcError.UnknownBlock);
+                header = system.NativeContractRepository.Ledger.GetHeader(snapshot, blockHashOrIndex.AsIndex()).NotNull_Or(RpcError.UnknownBlock);
             }
             else
             {
-                header = NativeContract.Ledger.GetHeader(snapshot, blockHashOrIndex.AsHash()).NotNull_Or(RpcError.UnknownBlock);
+                header = system.NativeContractRepository.Ledger.GetHeader(snapshot, blockHashOrIndex.AsHash()).NotNull_Or(RpcError.UnknownBlock);
             }
             if (verbose)
             {
                 JObject json = header.ToJson(system.Settings);
-                json["confirmations"] = NativeContract.Ledger.CurrentIndex(snapshot) - header.Index + 1;
-                UInt256 hash = NativeContract.Ledger.GetBlockHash(snapshot, header.Index + 1);
+                json["confirmations"] = system.NativeContractRepository.Ledger.CurrentIndex(snapshot) - header.Index + 1;
+                UInt256 hash = system.NativeContractRepository.Ledger.GetBlockHash(snapshot, header.Index + 1);
                 if (hash != null)
                     json["nextblockhash"] = hash.ToString();
                 return json;
@@ -143,18 +143,18 @@ namespace Neo.Plugins.RpcServer
         {
             if (contractNameOrHashOrId.IsId)
             {
-                var contractState = NativeContract.ContractManagement.GetContractById(system.StoreView, contractNameOrHashOrId.AsId());
+                var contractState = system.NativeContractRepository.ContractManagement.GetContractById(system.StoreView, contractNameOrHashOrId.AsId());
                 return contractState.NotNull_Or(RpcError.UnknownContract).ToJson();
             }
 
             var hash = contractNameOrHashOrId.IsName ? ToScriptHash(contractNameOrHashOrId.AsName()) : contractNameOrHashOrId.AsHash();
-            var contract = NativeContract.ContractManagement.GetContract(system.StoreView, hash);
+            var contract = system.NativeContractRepository.ContractManagement.GetContract(system.StoreView, hash);
             return contract.NotNull_Or(RpcError.UnknownContract).ToJson();
         }
 
-        private static UInt160 ToScriptHash(string keyword)
+        private UInt160 ToScriptHash(string keyword)
         {
-            foreach (var native in NativeContract.Contracts)
+            foreach (var native in system.NativeContractRepository.Contracts)
             {
                 if (keyword.Equals(native.Name, StringComparison.InvariantCultureIgnoreCase) || keyword == native.Id.ToString())
                     return native.Hash;
@@ -175,7 +175,7 @@ namespace Neo.Plugins.RpcServer
                 return new JArray(system.MemPool.GetVerifiedTransactions().Select(p => (JToken)p.Hash.ToString()));
 
             JObject json = new();
-            json["height"] = NativeContract.Ledger.CurrentIndex(system.StoreView);
+            json["height"] = system.NativeContractRepository.Ledger.CurrentIndex(system.StoreView);
             system.MemPool.GetVerifiedAndUnverifiedTransactions(
                 out IEnumerable<Transaction> verifiedTransactions,
                 out IEnumerable<Transaction> unverifiedTransactions);
@@ -196,16 +196,16 @@ namespace Neo.Plugins.RpcServer
             if (system.MemPool.TryGetValue(hash, out var tx) && !verbose)
                 return Convert.ToBase64String(tx.ToArray());
             var snapshot = system.StoreView;
-            var state = NativeContract.Ledger.GetTransactionState(snapshot, hash);
+            var state = system.NativeContractRepository.Ledger.GetTransactionState(snapshot, hash);
             tx ??= state?.Transaction;
             tx.NotNull_Or(RpcError.UnknownTransaction);
             if (!verbose) return Convert.ToBase64String(tx.ToArray());
             var json = Utility.TransactionToJson(tx, system.Settings);
             if (state is not null)
             {
-                var block = NativeContract.Ledger.GetTrimmedBlock(snapshot, NativeContract.Ledger.GetBlockHash(snapshot, state.BlockIndex));
+                var block = system.NativeContractRepository.Ledger.GetTrimmedBlock(snapshot, system.NativeContractRepository.Ledger.GetBlockHash(snapshot, state.BlockIndex));
                 json["blockhash"] = block.Hash.ToString();
-                json["confirmations"] = NativeContract.Ledger.CurrentIndex(snapshot) - block.Index + 1;
+                json["confirmations"] = system.NativeContractRepository.Ledger.CurrentIndex(snapshot) - block.Index + 1;
                 json["blocktime"] = block.Header.Timestamp;
             }
             return json;
@@ -225,7 +225,7 @@ namespace Neo.Plugins.RpcServer
             if (contractNameOrHashOrId.IsHash)
             {
                 var hash = contractNameOrHashOrId.AsHash();
-                var contract = NativeContract.ContractManagement.GetContract(snapshot, hash).NotNull_Or(RpcError.UnknownContract);
+                var contract = system.NativeContractRepository.ContractManagement.GetContract(snapshot, hash).NotNull_Or(RpcError.UnknownContract);
                 id = contract.Id;
             }
             else
@@ -255,7 +255,7 @@ namespace Neo.Plugins.RpcServer
             int id;
             if (contractNameOrHashOrId.IsHash)
             {
-                ContractState contract = NativeContract.ContractManagement.GetContract(snapshot, contractNameOrHashOrId.AsHash()).NotNull_Or(RpcError.UnknownContract);
+                ContractState contract = system.NativeContractRepository.ContractManagement.GetContract(snapshot, contractNameOrHashOrId.AsHash()).NotNull_Or(RpcError.UnknownContract);
                 id = contract.Id;
             }
             else
@@ -270,7 +270,7 @@ namespace Neo.Plugins.RpcServer
             int pageSize = settings.FindStoragePageSize;
             int i = 0;
 
-            using (var iter = NativeContract.ContractManagement.FindContractStorage(snapshot, id, prefix).Skip(count: start).GetEnumerator())
+            using (var iter = system.NativeContractRepository.ContractManagement.FindContractStorage(snapshot, id, prefix).Skip(count: start).GetEnumerator())
             {
                 var hasMore = false;
                 while (iter.MoveNext())
@@ -303,7 +303,7 @@ namespace Neo.Plugins.RpcServer
         [RpcMethodWithParams]
         protected internal virtual JToken GetTransactionHeight(UInt256 hash)
         {
-            uint? height = NativeContract.Ledger.GetTransactionState(system.StoreView, hash)?.BlockIndex;
+            uint? height = system.NativeContractRepository.Ledger.GetTransactionState(system.StoreView, hash)?.BlockIndex;
             if (height.HasValue) return height.Value;
             throw new RpcException(RpcError.UnknownTransaction);
         }
@@ -316,12 +316,12 @@ namespace Neo.Plugins.RpcServer
         protected internal virtual JToken GetNextBlockValidators()
         {
             using var snapshot = system.GetSnapshotCache();
-            var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount);
+            var validators = system.NativeContractRepository.NEO.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount);
             return validators.Select(p =>
             {
                 JObject validator = new();
                 validator["publickey"] = p.ToString();
-                validator["votes"] = (int)NativeContract.NEO.GetCandidateVote(snapshot, p);
+                validator["votes"] = (int)system.NativeContractRepository.NEO.GetCandidateVote(snapshot, p);
                 return validator;
             }).ToArray();
         }
@@ -337,12 +337,12 @@ namespace Neo.Plugins.RpcServer
             byte[] script;
             using (ScriptBuilder sb = new())
             {
-                script = sb.EmitDynamicCall(NativeContract.NEO.Hash, "getCandidates", null).ToArray();
+                script = sb.EmitDynamicCall(system.NativeContractRepository.NEO.Hash, "getCandidates", null).ToArray();
             }
             StackItem[] resultstack;
             try
             {
-                using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, settings: system.Settings, gas: settings.MaxGasInvoke);
+                using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, system.NativeContractRepository, settings: system.Settings, gas: settings.MaxGasInvoke);
                 resultstack = engine.ResultStack.ToArray();
             }
             catch
@@ -356,7 +356,7 @@ namespace Neo.Plugins.RpcServer
                 if (resultstack.Length > 0)
                 {
                     JArray jArray = new();
-                    var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount) ?? throw new RpcException(RpcError.InternalServerError.WithData("Can't get next block validators."));
+                    var validators = system.NativeContractRepository.NEO.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount) ?? throw new RpcException(RpcError.InternalServerError.WithData("Can't get next block validators."));
 
                     foreach (var item in resultstack)
                     {
@@ -389,7 +389,7 @@ namespace Neo.Plugins.RpcServer
         [RpcMethodWithParams]
         protected internal virtual JToken GetCommittee()
         {
-            return new JArray(NativeContract.NEO.GetCommittee(system.StoreView).Select(p => (JToken)p.ToString()));
+            return new JArray(system.NativeContractRepository.NEO.GetCommittee(system.StoreView).Select(p => (JToken)p.ToString()));
         }
 
         /// <summary>
@@ -399,7 +399,7 @@ namespace Neo.Plugins.RpcServer
         [RpcMethodWithParams]
         protected internal virtual JToken GetNativeContracts()
         {
-            return new JArray(NativeContract.Contracts.Select(p => NativeContract.ContractManagement.GetContract(system.StoreView, p.Hash).ToJson()));
+            return new JArray(system.NativeContractRepository.Contracts.Select(p => system.NativeContractRepository.ContractManagement.GetContract(system.StoreView, p.Hash).ToJson()));
         }
     }
 }

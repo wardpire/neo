@@ -75,12 +75,12 @@ namespace Neo.UnitTests.Network.P2P.Payloads
         {
             var test = new Conflicts() { Hash = _u };
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
-            var key = Ledger.UT_MemoryPool.CreateStorageKey(NativeContract.Ledger.Id, Prefix_Transaction, _u.ToArray());
+            var key = Ledger.UT_MemoryPool.CreateStorageKey(TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.Id, Prefix_Transaction, _u.ToArray());
 
             // Conflicting transaction is in the Conflicts attribute of some other on-chain transaction.
             var conflict = new TransactionState();
             snapshotCache.Add(key, new StorageItem(conflict));
-            Assert.IsTrue(test.Verify(snapshotCache, new Transaction()));
+            Assert.IsTrue(test.Verify(snapshotCache, new Transaction(), TestBlockchain.TheNeoSystem.NativeContractRepository));
 
             // Conflicting transaction is on-chain.
             snapshotCache.Delete(key);
@@ -91,11 +91,11 @@ namespace Neo.UnitTests.Network.P2P.Payloads
                 State = VMState.NONE
             };
             snapshotCache.Add(key, new StorageItem(conflict));
-            Assert.IsFalse(test.Verify(snapshotCache, new Transaction()));
+            Assert.IsFalse(test.Verify(snapshotCache, new Transaction(), TestBlockchain.TheNeoSystem.NativeContractRepository));
 
             // There's no conflicting transaction at all.
             snapshotCache.Delete(key);
-            Assert.IsTrue(test.Verify(snapshotCache, new Transaction()));
+            Assert.IsTrue(test.Verify(snapshotCache, new Transaction(), TestBlockchain.TheNeoSystem.NativeContractRepository));
         }
     }
 }

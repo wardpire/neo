@@ -90,13 +90,13 @@ namespace Neo.Wallets
         /// <param name="accountScript">Function to retrive the script's account from a hash.</param>
         /// <param name="maxExecutionCost">The maximum cost that can be spent when a contract is executed.</param>
         /// <returns>The network fee of the transaction.</returns>
-        public static long CalculateNetworkFee(this Transaction tx, DataCache snapshot, ProtocolSettings settings, Func<UInt160, byte[]> accountScript, long maxExecutionCost = ApplicationEngine.TestModeGas)
+        public static long CalculateNetworkFee(this Transaction tx, DataCache snapshot, ProtocolSettings settings,NativeContractRepository nativeContractRepository, Func<UInt160, byte[]> accountScript, long maxExecutionCost = ApplicationEngine.TestModeGas)
         {
-            UInt160[] hashes = tx.GetScriptHashesForVerifying(snapshot);
+            UInt160[] hashes = tx.GetScriptHashesForVerifying(snapshot, nativeContractRepository);
 
             // base size for transaction: includes const_header + signers + attributes + script + hashes
             int size = Transaction.HeaderSize + tx.Signers.GetVarSize() + tx.Attributes.GetVarSize() + tx.Script.GetVarSize() + UnsafeData.GetVarSize(hashes.Length), index = -1;
-            uint exec_fee_factor = NativeContract.Policy.GetExecFeeFactor(snapshot);
+            uint exec_fee_factor = nativeContractRepository.Policy.GetExecFeeFactor(snapshot);
             long networkFee = 0;
             foreach (UInt160 hash in hashes)
             {
@@ -120,7 +120,7 @@ namespace Neo.Wallets
                 if (witnessScript is null || witnessScript.Length == 0)
                 {
                     // Contract-based verification
-                    var contract = NativeContract.ContractManagement.GetContract(snapshot, hash);
+                    var contract = nativeContractRepository.ContractManagement.GetContract(snapshot, hash);
                     if (contract is null)
                         throw new ArgumentException($"The smart contract or address {hash} ({hash.ToAddress(settings.AddressVersion)}) is not found. " +
                             $"If this is your wallet address and you want to sign a transaction with it, make sure you have opened this wallet.");
@@ -170,7 +170,7 @@ namespace Neo.Wallets
                     size += System.Array.Empty<byte>().GetVarSize() + invSize;
 
                     // Check verify cost
-                    using ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Verification, tx, snapshot.CloneCache(), settings: settings, gas: maxExecutionCost);
+                    using ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Verification, tx, snapshot.CloneCache(), nativeContractRepository, settings: settings, gas: maxExecutionCost);
                     engine.LoadContract(contract, md, CallFlags.ReadOnly);
                     if (invocationScript != null) engine.LoadScript(invocationScript, configureState: p => p.CallFlags = CallFlags.None);
                     if (engine.Execute() == VMState.HALT)
@@ -199,10 +199,10 @@ namespace Neo.Wallets
                     }
                 }
             }
-            networkFee += size * NativeContract.Policy.GetFeePerByte(snapshot);
+            networkFee += size * nativeContractRepository.Policy.GetFeePerByte(snapshot);
             foreach (TransactionAttribute attr in tx.Attributes)
             {
-                networkFee += attr.CalculateNetworkFee(snapshot, tx);
+                networkFee += attr.CalculateNetworkFee(snapshot, tx, nativeContractRepository);
             }
             return networkFee;
         }

@@ -51,7 +51,7 @@ namespace Neo.UnitTests
             header.MerkleRoot = merkRootVal = UInt256.Parse("0x6226416a0e5aca42b5566f5a19ab467692688ba9d47986f6981a7f747bba2772");
             header.Timestamp = timestampVal = new DateTime(2024, 06, 05, 0, 33, 1, 001, DateTimeKind.Utc).ToTimestampMS();
             if (snapshot != null)
-                header.Index = indexVal = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
+                header.Index = indexVal = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CurrentIndex(snapshot) + 1;
             else
                 header.Index = indexVal = 0;
             header.Nonce = nonceVal = 0;
@@ -98,7 +98,7 @@ namespace Neo.UnitTests
         {
             var block = new Block();
             var header = new Header();
-            var state = snapshot.TryGet(NativeContract.Ledger.CreateStorageKey(Prefix_CurrentBlock)).GetInteroperable<HashIndexState>();
+            var state = snapshot.TryGet(TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CreateStorageKey(Prefix_CurrentBlock)).GetInteroperable<HashIndexState>();
             SetupHeaderWithValues(snapshot, header, state.Hash, out _, out _, out _, out _, out _, out _);
 
             block.Header = header;
@@ -106,7 +106,7 @@ namespace Neo.UnitTests
 
             header.MerkleRoot = MerkleTree.ComputeRoot(block.Transactions.Select(p => p.Hash).ToArray());
             var contract = Contract.CreateMultiSigContract(1, TestProtocolSettings.SoleNode.StandbyCommittee);
-            var sc = new ContractParametersContext(snapshot, header, TestProtocolSettings.SoleNode.Network);
+            var sc =  new ContractParametersContext(snapshot, header, TestProtocolSettings.SoleNode.Network, TestBlockchain.TheNeoSystem.NativeContractRepository);
             var signature = header.Sign(account.GetKey(), TestProtocolSettings.SoleNode.Network);
             sc.AddSignature(contract, TestProtocolSettings.SoleNode.StandbyCommittee[0], signature.ToArray());
             block.Header.Witness = sc.GetWitnesses()[0];
@@ -116,24 +116,24 @@ namespace Neo.UnitTests
 
         public static void BlocksDelete(DataCache snapshot, UInt256 hash)
         {
-            snapshot.Delete(NativeContract.Ledger.CreateStorageKey(Prefix_BlockHash, hash));
-            snapshot.Delete(NativeContract.Ledger.CreateStorageKey(Prefix_Block, hash));
+            snapshot.Delete(TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CreateStorageKey(Prefix_BlockHash, hash));
+            snapshot.Delete(TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CreateStorageKey(Prefix_Block, hash));
         }
 
         public static void TransactionAdd(DataCache snapshot, params TransactionState[] txs)
         {
             foreach (var tx in txs)
             {
-                snapshot.Add(NativeContract.Ledger.CreateStorageKey(Prefix_Transaction, tx.Transaction.Hash), new StorageItem(tx));
+                snapshot.Add(TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CreateStorageKey(Prefix_Transaction, tx.Transaction.Hash), new StorageItem(tx));
             }
         }
 
         public static void BlocksAdd(DataCache snapshot, UInt256 hash, TrimmedBlock block)
         {
-            snapshot.Add(NativeContract.Ledger.CreateStorageKey(Prefix_BlockHash, block.Index), new StorageItem(hash.ToArray()));
-            snapshot.Add(NativeContract.Ledger.CreateStorageKey(Prefix_Block, hash), new StorageItem(block.ToArray()));
+            snapshot.Add(TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CreateStorageKey(Prefix_BlockHash, block.Index), new StorageItem(hash.ToArray()));
+            snapshot.Add(TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CreateStorageKey(Prefix_Block, hash), new StorageItem(block.ToArray()));
 
-            var state = snapshot.GetAndChange(NativeContract.Ledger.CreateStorageKey(Prefix_CurrentBlock), () => new StorageItem(new HashIndexState())).GetInteroperable<HashIndexState>();
+            var state = snapshot.GetAndChange(TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CreateStorageKey(Prefix_CurrentBlock), () => new StorageItem(new HashIndexState())).GetInteroperable<HashIndexState>();
             state.Hash = hash;
             state.Index = block.Index;
         }
@@ -151,9 +151,9 @@ namespace Neo.UnitTests
                 TransactionAdd(snapshot, state);
             });
 
-            snapshot.Add(NativeContract.Ledger.CreateStorageKey(Prefix_BlockHash, block.Index), new StorageItem(hash.ToArray()));
-            snapshot.Add(NativeContract.Ledger.CreateStorageKey(Prefix_Block, hash), new StorageItem(block.ToTrimmedBlock().ToArray()));
-            var state = snapshot.GetAndChange(NativeContract.Ledger.CreateStorageKey(Prefix_CurrentBlock), () => new StorageItem(new HashIndexState())).GetInteroperable<HashIndexState>();
+            snapshot.Add(TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CreateStorageKey(Prefix_BlockHash, block.Index), new StorageItem(hash.ToArray()));
+            snapshot.Add(TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CreateStorageKey(Prefix_Block, hash), new StorageItem(block.ToTrimmedBlock().ToArray()));
+            var state = snapshot.GetAndChange(TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CreateStorageKey(Prefix_CurrentBlock), () => new StorageItem(new HashIndexState())).GetInteroperable<HashIndexState>();
             state.Hash = hash;
             state.Index = block.Index;
         }

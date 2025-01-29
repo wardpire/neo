@@ -40,7 +40,7 @@ namespace Neo.UnitTests
             var tx = wallet.MakeTransaction(snapshot, [
                     new TransferOutput
                     {
-                        AssetId = NativeContract.GAS.Hash,
+                        AssetId = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Hash,
                         ScriptHash = account,
                         Value = new BigDecimal(BigInteger.One, 8)
                     }
@@ -49,7 +49,7 @@ namespace Neo.UnitTests
 
             tx.Nonce = nonce;
             tx.Signers = [new Signer { Account = account, Scopes = WitnessScope.CalledByEntry }];
-            var data = new ContractParametersContext(snapshot, tx, TestProtocolSettings.Default.Network);
+            var data = new ContractParametersContext(snapshot, tx, TestProtocolSettings.Default.Network, TestBlockchain.TheNeoSystem.NativeContractRepository);
             Assert.IsNull(data.GetSignatures(tx.Sender));
             Assert.IsTrue(wallet.Sign(data));
             Assert.IsTrue(data.Completed);
@@ -64,7 +64,7 @@ namespace Neo.UnitTests
             var tx = wallet.MakeTransaction(snapshot, [
                     new TransferOutput
                     {
-                        AssetId = NativeContract.GAS.Hash,
+                        AssetId = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Hash,
                         ScriptHash = account,
                         Value = new BigDecimal(BigInteger.One, 8)
                     }
@@ -73,7 +73,7 @@ namespace Neo.UnitTests
             tx.Attributes = conflicts.Select(conflict => new Conflicts { Hash = conflict }).ToArray();
             tx.Nonce = nonce;
             tx.Signers = [new Signer { Account = account, Scopes = WitnessScope.CalledByEntry }];
-            var data = new ContractParametersContext(snapshot, tx, TestProtocolSettings.Default.Network);
+            var data = new ContractParametersContext(snapshot, tx, TestProtocolSettings.Default.Network, TestBlockchain.TheNeoSystem.NativeContractRepository);
             Assert.IsNull(data.GetSignatures(tx.Sender));
             Assert.IsTrue(wallet.Sign(data));
             Assert.IsTrue(data.Completed);
@@ -139,7 +139,7 @@ namespace Neo.UnitTests
             {
                 Version = 0,
                 Nonce = (uint)rand.Next(),
-                ValidUntilBlock = NativeContract.Ledger.CurrentIndex(snapshot) + wallet.ProtocolSettings.MaxValidUntilBlockIncrement,
+                ValidUntilBlock = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CurrentIndex(snapshot) + wallet.ProtocolSettings.MaxValidUntilBlockIncrement,
                 Signers = [new Signer { Account = sender, Scopes = WitnessScope.CalledByEntry }],
                 Attributes = [],
                 Script = new[] { (byte)OpCode.RET }
@@ -165,7 +165,7 @@ namespace Neo.UnitTests
                     break;
                 case InvalidTransactionType.Expired:
                     // Set an expired ValidUntilBlock
-                    tx.ValidUntilBlock = NativeContract.Ledger.CurrentIndex(snapshot) - 1;
+                    tx.ValidUntilBlock = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CurrentIndex(snapshot) - 1;
                     break;
                 case InvalidTransactionType.Conflicting:
                     // To create a conflicting transaction, we'd need another valid transaction.
@@ -174,7 +174,7 @@ namespace Neo.UnitTests
                     break;
             }
 
-            var data = new ContractParametersContext(snapshot, tx, TestProtocolSettings.Default.Network);
+            var data = new ContractParametersContext(snapshot, tx, TestProtocolSettings.Default.Network, TestBlockchain.TheNeoSystem.NativeContractRepository);
             Assert.IsNull(data.GetSignatures(tx.Sender));
             Assert.IsTrue(wallet.Sign(data));
             Assert.IsTrue(data.Completed);
@@ -217,8 +217,8 @@ namespace Neo.UnitTests
             {
                 Header = new Header
                 {
-                    Index = NativeContract.Ledger.CurrentIndex(snapshot) + 1,
-                    PrevHash = NativeContract.Ledger.CurrentHash(snapshot),
+                    Index = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CurrentIndex(snapshot) + 1,
+                    PrevHash = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CurrentHash(snapshot),
                     MerkleRoot = new UInt256(Crypto.Hash256(tx.Hash.ToArray())),
                     Timestamp = TimeProvider.Current.UtcNow.ToTimestampMS(),
                     NextConsensus = UInt160.Zero,

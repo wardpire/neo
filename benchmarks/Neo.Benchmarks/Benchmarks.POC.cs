@@ -20,7 +20,7 @@ namespace Neo.Benchmark
     public class Benchmarks_PoCs
     {
         private static readonly ProtocolSettings protocol = ProtocolSettings.Load("config.json");
-        private static readonly NeoSystem system = new(protocol, (string)null);
+        private static readonly NeoSystem system = new(protocol,new Plugins.PluginRepository(),new SmartContract.Native.NativeContractRepository(), (string)null);
 
         [Benchmark]
         public void NeoIssue2725()
@@ -70,7 +70,7 @@ namespace Neo.Benchmark
                 Witnesses = Array.Empty<Witness>()
             };
             using var snapshot = system.GetSnapshotCache();
-            using var engine = ApplicationEngine.Create(TriggerType.Application, tx, snapshot, system.GenesisBlock, protocol, tx.SystemFee);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, tx, snapshot, new SmartContract.Native.NativeContractRepository(), system.GenesisBlock, protocol, tx.SystemFee);
             engine.LoadScript(tx.Script);
             engine.Execute();
             Debug.Assert(engine.State == VMState.FAULT);

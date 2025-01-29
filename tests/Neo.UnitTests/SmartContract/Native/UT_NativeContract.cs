@@ -1,6 +1,6 @@
 // Copyright (C) 2015-2024 The Neo Project.
 //
-// UT_NativeContract.cs file belongs to the neo project and is free
+// UT_TestBlockchain.TheNeoSystem.NativeContractRepository.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
 // accompanying file LICENSE in the main directory of the
 // repository or http://www.opensource.org/licenses/mit-license.php
@@ -84,7 +84,7 @@ namespace Neo.UnitTests.SmartContract.Native
         [TestMethod]
         public void TestGetContract()
         {
-            Assert.IsTrue(NativeContract.NEO == NativeContract.GetContract(NativeContract.NEO.Hash));
+            Assert.IsTrue(TestBlockchain.TheNeoSystem.NativeContractRepository.NEO == TestBlockchain.TheNeoSystem.NativeContractRepository.GetContract(TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Hash));
         }
 
         [TestMethod]
@@ -97,14 +97,14 @@ namespace Neo.UnitTests.SmartContract.Native
             ProtocolSettings settings = ProtocolSettings.Load(file, false);
             File.Delete(file);
 
-            Assert.IsTrue(NativeContract.CryptoLib.IsInitializeBlock(settings, 0, out var hf));
+            Assert.IsTrue(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.IsInitializeBlock(settings, 0, out var hf));
             Assert.IsNotNull(hf);
             Assert.AreEqual(0, hf.Length);
 
-            Assert.IsFalse(NativeContract.CryptoLib.IsInitializeBlock(settings, 1, out hf));
+            Assert.IsFalse(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.IsInitializeBlock(settings, 1, out hf));
             Assert.IsNull(hf);
 
-            Assert.IsTrue(NativeContract.CryptoLib.IsInitializeBlock(settings, 20, out hf));
+            Assert.IsTrue(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.IsInitializeBlock(settings, 20, out hf));
             Assert.AreEqual(1, hf.Length);
             Assert.AreEqual(Hardfork.HF_Cockatrice, hf[0]);
         }
@@ -128,7 +128,7 @@ namespace Neo.UnitTests.SmartContract.Native
 
             // Ensure that native NEP17 contracts contain proper supported standards and events declared
             // in the manifest constructed for all hardforks enabled. Ref. https://github.com/neo-project/neo/pull/3195.
-            foreach (var h in new List<UInt160>() { NativeContract.GAS.Hash, NativeContract.NEO.Hash })
+            foreach (var h in new List<UInt160>() { TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Hash, TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Hash })
             {
                 var state = Call_GetContract(snapshot, h, persistingBlock);
                 Assert.IsTrue(state.Manifest.SupportedStandards.Contains("NEP-17"));
@@ -155,7 +155,7 @@ namespace Neo.UnitTests.SmartContract.Native
 
             // Ensure that all native contracts have proper state generated with an assumption that
             // all hardforks enabled.
-            foreach (var ctr in NativeContract.Contracts)
+            foreach (var ctr in TestBlockchain.TheNeoSystem.NativeContractRepository.Contracts)
             {
                 var state = Call_GetContract(snapshot, ctr.Hash, persistingBlock);
                 Assert.AreEqual(_nativeStates[ctr.Name], state.ToJson().ToString());
@@ -164,10 +164,10 @@ namespace Neo.UnitTests.SmartContract.Native
 
         internal static ContractState Call_GetContract(DataCache snapshot, UInt160 address, Block persistingBlock)
         {
-            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, persistingBlock, settings: TestBlockchain.TheNeoSystem.Settings);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, persistingBlock, settings: TestBlockchain.TheNeoSystem.Settings);
 
             using var script = new ScriptBuilder();
-            script.EmitDynamicCall(NativeContract.ContractManagement.Hash, "getContract", address);
+            script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.ContractManagement.Hash, "getContract", address);
             engine.LoadScript(script.ToArray());
 
             engine.Execute().Should().Be(VMState.HALT);

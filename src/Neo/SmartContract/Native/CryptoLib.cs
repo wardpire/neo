@@ -29,7 +29,7 @@ namespace Neo.SmartContract.Native
             [NamedCurveHash.secp256r1Keccak256] = (ECCurve.Secp256r1, HashAlgorithm.Keccak256),
         };
 
-        internal CryptoLib() : base() { }
+        internal CryptoLib(NativeContractRepository nativeContractRepository) : base(nativeContractRepository) { }
 
         /// <summary>
         /// Computes the hash value for the specified byte array using the ripemd160 algorithm.

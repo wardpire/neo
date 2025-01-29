@@ -58,7 +58,7 @@ namespace Neo.UnitTests.Ledger
             TimeProvider.ResetToDefault();
 
             // Create a MemoryPool with capacity of 100
-            _unit = new MemoryPool(new NeoSystem(TestProtocolSettings.Default with { MemoryPoolMaxTransactions = 100 }, storageProvider: (string)null));
+            _unit = new MemoryPool(new NeoSystem(TestProtocolSettings.Default with { MemoryPoolMaxTransactions = 100 }, TestBlockchain.TheNeoSystem.PluginRepository, TestBlockchain.TheNeoSystem.NativeContractRepository, storageProvider: (string)null));
 
             // Verify capacity equals the amount specified
             _unit.Capacity.Should().Be(100);
@@ -81,8 +81,8 @@ namespace Neo.UnitTests.Ledger
             var randomBytes = new byte[16];
             random.NextBytes(randomBytes);
             Mock<Transaction> mock = new();
-            mock.Setup(p => p.VerifyStateDependent(It.IsAny<ProtocolSettings>(), It.IsAny<DataCache>(), It.IsAny<TransactionVerificationContext>(), It.IsAny<IEnumerable<Transaction>>())).Returns(VerifyResult.Succeed);
-            mock.Setup(p => p.VerifyStateIndependent(It.IsAny<ProtocolSettings>())).Returns(VerifyResult.Succeed);
+            mock.Setup(p => p.VerifyStateDependent(It.IsAny<ProtocolSettings>(), It.IsAny<DataCache>(), It.IsAny<TransactionVerificationContext>(), TestBlockchain.TheNeoSystem.NativeContractRepository, It.IsAny<IEnumerable<Transaction>>())).Returns(VerifyResult.Succeed);
+            mock.Setup(p => p.VerifyStateIndependent(It.IsAny<ProtocolSettings>(), TestBlockchain.TheNeoSystem.NativeContractRepository)).Returns(VerifyResult.Succeed);
             mock.Object.Script = randomBytes;
             mock.Object.NetworkFee = fee;
             mock.Object.Attributes = Array.Empty<TransactionAttribute>();
@@ -105,8 +105,8 @@ namespace Neo.UnitTests.Ledger
             random.NextBytes(randomBytes);
             Mock<Transaction> mock = new();
             UInt160 sender = senderAccount;
-            mock.Setup(p => p.VerifyStateDependent(It.IsAny<ProtocolSettings>(), It.IsAny<DataCache>(), It.IsAny<TransactionVerificationContext>(), It.IsAny<IEnumerable<Transaction>>())).Returns((ProtocolSettings settings, DataCache snapshot, TransactionVerificationContext context, IEnumerable<Transaction> conflictsList) => context.CheckTransaction(mock.Object, conflictsList, snapshot) ? VerifyResult.Succeed : VerifyResult.InsufficientFunds);
-            mock.Setup(p => p.VerifyStateIndependent(It.IsAny<ProtocolSettings>())).Returns(VerifyResult.Succeed);
+            mock.Setup(p => p.VerifyStateDependent(It.IsAny<ProtocolSettings>(), It.IsAny<DataCache>(), It.IsAny<TransactionVerificationContext>(), TestBlockchain.TheNeoSystem.NativeContractRepository, It.IsAny<IEnumerable<Transaction>>())).Returns((ProtocolSettings settings, DataCache snapshot, TransactionVerificationContext context, IEnumerable<Transaction> conflictsList) => context.CheckTransaction(mock.Object, conflictsList, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository) ? VerifyResult.Succeed : VerifyResult.InsufficientFunds);
+            mock.Setup(p => p.VerifyStateIndependent(It.IsAny<ProtocolSettings>(), TestBlockchain.TheNeoSystem.NativeContractRepository)).Returns(VerifyResult.Succeed);
             mock.Object.Script = randomBytes;
             mock.Object.NetworkFee = fee;
             mock.Object.Attributes = Array.Empty<TransactionAttribute>();
@@ -219,11 +219,11 @@ namespace Neo.UnitTests.Ledger
         public async Task BlockPersistAndReverificationWillAbandonTxAsBalanceTransfered()
         {
             var snapshot = GetSnapshot();
-            BigInteger balance = NativeContract.GAS.BalanceOf(snapshot, senderAccount);
-            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
+            BigInteger balance = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.BalanceOf(snapshot, senderAccount);
+            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
             engine.LoadScript(Array.Empty<byte>());
-            await NativeContract.GAS.Burn(engine, UInt160.Zero, balance);
-            _ = NativeContract.GAS.Mint(engine, UInt160.Zero, 70, true);
+            await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(engine, UInt160.Zero, balance);
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(engine, UInt160.Zero, 70, true);
 
             long txFee = 1;
             AddTransactionsWithBalanceVerify(70, txFee, engine.SnapshotCache);
@@ -239,10 +239,10 @@ namespace Neo.UnitTests.Ledger
             // Simulate the transfer process in tx by burning the balance
             UInt160 sender = block.Transactions[0].Sender;
 
-            ApplicationEngine applicationEngine = ApplicationEngine.Create(TriggerType.All, block, snapshot, block, settings: TestBlockchain.TheNeoSystem.Settings, gas: (long)balance);
+            ApplicationEngine applicationEngine = ApplicationEngine.Create(TriggerType.All, block, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, block, settings: TestBlockchain.TheNeoSystem.Settings, gas: (long)balance);
             applicationEngine.LoadScript(Array.Empty<byte>());
-            await NativeContract.GAS.Burn(applicationEngine, sender, NativeContract.GAS.BalanceOf(snapshot, sender));
-            _ = NativeContract.GAS.Mint(applicationEngine, sender, txFee * 30, true); // Set the balance to meet 30 txs only
+            await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(applicationEngine, sender, TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.BalanceOf(snapshot, sender));
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(applicationEngine, sender, txFee * 30, true); // Set the balance to meet 30 txs only
 
             // Persist block and reverify all the txs in mempool, but half of the txs will be discarded
             _unit.UpdatePoolForBlockPersisted(block, applicationEngine.SnapshotCache);
@@ -250,8 +250,8 @@ namespace Neo.UnitTests.Ledger
             _unit.UnverifiedSortedTxCount.Should().Be(0);
 
             // Revert the balance
-            await NativeContract.GAS.Burn(applicationEngine, sender, txFee * 30);
-            _ = NativeContract.GAS.Mint(applicationEngine, sender, balance, true);
+            await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(applicationEngine, sender, txFee * 30);
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(applicationEngine, sender, balance, true);
         }
 
         [TestMethod]
@@ -260,11 +260,11 @@ namespace Neo.UnitTests.Ledger
             // Arrange: prepare mempooled and in-bock txs conflicting with each other.
             long txFee = 1;
             var snapshot = GetSnapshot();
-            BigInteger balance = NativeContract.GAS.BalanceOf(snapshot, senderAccount);
-            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
+            BigInteger balance = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.BalanceOf(snapshot, senderAccount);
+            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
             engine.LoadScript(Array.Empty<byte>());
-            await NativeContract.GAS.Burn(engine, UInt160.Zero, balance);
-            _ = NativeContract.GAS.Mint(engine, UInt160.Zero, 7, true); // balance enough for 7 mempooled txs
+            await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(engine, UInt160.Zero, balance);
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(engine, UInt160.Zero, 7, true); // balance enough for 7 mempooled txs
 
             var mp1 = CreateTransactionWithFeeAndBalanceVerify(txFee);  // mp1 doesn't conflict with anyone
             _unit.TryAdd(mp1, engine.SnapshotCache).Should().Be(VerifyResult.Succeed);
@@ -316,8 +316,8 @@ namespace Neo.UnitTests.Ledger
             _unit.UnverifiedSortedTxCount.Should().Be(0);
 
             // Cleanup: revert the balance.
-            await NativeContract.GAS.Burn(engine, UInt160.Zero, txFee * 7);
-            _ = NativeContract.GAS.Mint(engine, UInt160.Zero, balance, true);
+            await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(engine, UInt160.Zero, txFee * 7);
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(engine, UInt160.Zero, balance, true);
         }
 
         [TestMethod]
@@ -327,12 +327,12 @@ namespace Neo.UnitTests.Ledger
             long txFee = 1;
             var maliciousSender = new UInt160(Crypto.Hash160(new byte[] { 1, 2, 3 }));
             var snapshot = GetSnapshot();
-            BigInteger balance = NativeContract.GAS.BalanceOf(snapshot, senderAccount);
-            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
+            BigInteger balance = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.BalanceOf(snapshot, senderAccount);
+            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
             engine.LoadScript(Array.Empty<byte>());
-            await NativeContract.GAS.Burn(engine, UInt160.Zero, balance);
-            _ = NativeContract.GAS.Mint(engine, UInt160.Zero, 100, true); // balance enough for all mempooled txs
-            _ = NativeContract.GAS.Mint(engine, maliciousSender, 100, true); // balance enough for all mempooled txs
+            await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(engine, UInt160.Zero, balance);
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(engine, UInt160.Zero, 100, true); // balance enough for all mempooled txs
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(engine, maliciousSender, 100, true); // balance enough for all mempooled txs
 
             var mp1 = CreateTransactionWithFeeAndBalanceVerify(txFee);  // mp1 doesn't conflict with anyone and not in the pool yet
 
@@ -415,10 +415,10 @@ namespace Neo.UnitTests.Ledger
             _unit.GetVerifiedTransactions().Should().Contain(new List<Transaction>() { mp1, mp6, mp4, mp7 });
 
             // Cleanup: revert the balance.
-            await NativeContract.GAS.Burn(engine, UInt160.Zero, 100);
-            _ = NativeContract.GAS.Mint(engine, UInt160.Zero, balance, true);
-            await NativeContract.GAS.Burn(engine, maliciousSender, 100);
-            _ = NativeContract.GAS.Mint(engine, maliciousSender, balance, true);
+            await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(engine, UInt160.Zero, 100);
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(engine, UInt160.Zero, balance, true);
+            await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(engine, maliciousSender, 100);
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(engine, maliciousSender, balance, true);
         }
 
         [TestMethod]
@@ -427,11 +427,11 @@ namespace Neo.UnitTests.Ledger
             // Arrange: prepare mempooled txs that have conflicts.
             long txFee = 1;
             var snapshot = GetSnapshot();
-            BigInteger balance = NativeContract.GAS.BalanceOf(snapshot, senderAccount);
-            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
+            BigInteger balance = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.BalanceOf(snapshot, senderAccount);
+            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
             engine.LoadScript(Array.Empty<byte>());
-            await NativeContract.GAS.Burn(engine, UInt160.Zero, balance);
-            _ = NativeContract.GAS.Mint(engine, UInt160.Zero, 100, true); // balance enough for all mempooled txs
+            await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(engine, UInt160.Zero, balance);
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(engine, UInt160.Zero, 100, true); // balance enough for all mempooled txs
 
             var mp1 = CreateTransactionWithFeeAndBalanceVerify(txFee);  // mp1 doesn't conflict with anyone and not in the pool yet
 
@@ -649,7 +649,7 @@ namespace Neo.UnitTests.Ledger
         [TestMethod]
         public void TestReVerifyTopUnverifiedTransactionsIfNeeded()
         {
-            _unit = new MemoryPool(new NeoSystem(TestProtocolSettings.Default with { MemoryPoolMaxTransactions = 600 }, storageProvider: (string)null));
+            _unit = new MemoryPool(new NeoSystem(TestProtocolSettings.Default with { MemoryPoolMaxTransactions = 600 }, TestBlockchain.TheNeoSystem.PluginRepository, TestBlockchain.TheNeoSystem.NativeContractRepository, storageProvider: (string)null));
 
             AddTransaction(CreateTransaction(100000001));
             AddTransaction(CreateTransaction(100000001));
@@ -722,8 +722,8 @@ namespace Neo.UnitTests.Ledger
             {
                 Value = feePerByte
             };
-            var key1 = CreateStorageKey(NativeContract.Policy.Id, Prefix_MaxTransactionsPerBlock);
-            var key2 = CreateStorageKey(NativeContract.Policy.Id, Prefix_FeePerByte);
+            var key1 = CreateStorageKey(TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Id, Prefix_MaxTransactionsPerBlock);
+            var key2 = CreateStorageKey(TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Id, Prefix_FeePerByte);
             snapshot.Add(key1, item1);
             snapshot.Add(key2, item2);
 

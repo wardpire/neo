@@ -77,7 +77,7 @@ namespace Neo.SmartContract
         /// <returns>The storage context for the current contract.</returns>
         protected internal StorageContext GetStorageContext()
         {
-            ContractState contract = NativeContract.ContractManagement.GetContract(SnapshotCache, CurrentScriptHash);
+            ContractState contract = NativeContractRepository.ContractManagement.GetContract(SnapshotCache, CurrentScriptHash);
             return new StorageContext
             {
                 Id = contract.Id,
@@ -92,7 +92,7 @@ namespace Neo.SmartContract
         /// <returns>The storage context for the current contract.</returns>
         protected internal StorageContext GetReadOnlyContext()
         {
-            ContractState contract = NativeContract.ContractManagement.GetContract(SnapshotCache, CurrentScriptHash);
+            ContractState contract = NativeContractRepository.ContractManagement.GetContract(SnapshotCache, CurrentScriptHash);
             return new StorageContext
             {
                 Id = contract.Id,

@@ -64,15 +64,15 @@ namespace Neo.UnitTests.SmartContract.Native
             foreach (var role in roles)
             {
                 var snapshot1 = _snapshotCache.CloneCache();
-                UInt160 committeeMultiSigAddr = NativeContract.NEO.GetCommitteeAddress(snapshot1);
+                UInt160 committeeMultiSigAddr = TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.GetCommitteeAddress(snapshot1);
                 List<NotifyEventArgs> notifications = new List<NotifyEventArgs>();
                 EventHandler<NotifyEventArgs> ev = (o, e) => notifications.Add(e);
                 ApplicationEngine.Notify += ev;
-                var ret = NativeContract.RoleManagement.Call(
+                var ret = TestBlockchain.TheNeoSystem.NativeContractRepository.RoleManagement.Call(
                     snapshot1,
                     new Nep17NativeContractExtensions.ManualWitness(committeeMultiSigAddr),
                     new Block { Header = new Header() },
-                    "designateAsRole",
+                    "designateAsRole", TestBlockchain.TheNeoSystem.NativeContractRepository,
                     new ContractParameter(ContractParameterType.Integer) { Value = new BigInteger((int)role) },
                     new ContractParameter(ContractParameterType.Array) { Value = publicKeys.Select(p => new ContractParameter(ContractParameterType.ByteArray) { Value = p.ToArray() }).ToList() }
                 );
@@ -81,9 +81,9 @@ namespace Neo.UnitTests.SmartContract.Native
                 notifications.Count.Should().Be(1);
                 notifications[0].EventName.Should().Be("Designation");
                 var snapshot2 = _snapshotCache.CloneCache();
-                ret = NativeContract.RoleManagement.Call(
+                ret = TestBlockchain.TheNeoSystem.NativeContractRepository.RoleManagement.Call(
                     snapshot2,
-                    "getDesignatedByRole",
+                    "getDesignatedByRole", TestBlockchain.TheNeoSystem.NativeContractRepository,
                     new ContractParameter(ContractParameterType.Integer) { Value = new BigInteger((int)role) },
                     new ContractParameter(ContractParameterType.Integer) { Value = new BigInteger(1u) }
                 );
@@ -92,9 +92,9 @@ namespace Neo.UnitTests.SmartContract.Native
                 (ret as VM.Types.Array)[0].GetSpan().ToHexString().Should().Be(publicKeys[0].ToArray().ToHexString());
                 (ret as VM.Types.Array)[1].GetSpan().ToHexString().Should().Be(publicKeys[1].ToArray().ToHexString());
 
-                ret = NativeContract.RoleManagement.Call(
+                ret = TestBlockchain.TheNeoSystem.NativeContractRepository.RoleManagement.Call(
                     snapshot2,
-                    "getDesignatedByRole",
+                    "getDesignatedByRole", TestBlockchain.TheNeoSystem.NativeContractRepository,
                     new ContractParameter(ContractParameterType.Integer) { Value = new BigInteger((int)role) },
                     new ContractParameter(ContractParameterType.Integer) { Value = new BigInteger(0) }
                 );

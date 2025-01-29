@@ -22,10 +22,16 @@ using System.Runtime.CompilerServices;
 
 namespace Neo.SmartContract.Native
 {
+    public interface INativeContract
+    {
+        public int Id { get; }
+        public UInt160 Hash { get; }
+    }
+
     /// <summary>
     /// The base class of all native contracts.
     /// </summary>
-    public abstract class NativeContract
+    public abstract class NativeContract : INativeContract
     {
         private class NativeContractsCache
         {
@@ -41,7 +47,7 @@ namespace Neo.SmartContract.Native
             {
                 if (NativeContracts.TryGetValue(native.Id, out var value)) return value;
 
-                uint index = engine.PersistingBlock is null ? Ledger.CurrentIndex(engine.SnapshotCache) : engine.PersistingBlock.Index;
+                uint index = engine.PersistingBlock is null ? engine.NativeContractRepository.Ledger.CurrentIndex(engine.SnapshotCache) : engine.PersistingBlock.Index;
                 CacheEntry methods = native.GetAllowedMethods(engine.ProtocolSettings.IsHardforkEnabled, index);
                 NativeContracts[native.Id] = methods;
                 return methods;
@@ -49,66 +55,10 @@ namespace Neo.SmartContract.Native
         }
 
         public delegate bool IsHardforkEnabledDelegate(Hardfork hf, uint blockHeight);
-        private static readonly List<NativeContract> s_contractsList = [];
-        private static readonly Dictionary<UInt160, NativeContract> s_contractsDictionary = new();
         private readonly ImmutableHashSet<Hardfork> _usedHardforks;
         private readonly ReadOnlyCollection<ContractMethodMetadata> _methodDescriptors;
         private readonly ReadOnlyCollection<ContractEventAttribute> _eventsDescriptors;
-        private static int id_counter = 0;
-
-        #region Named Native Contracts
-
-        /// <summary>
-        /// Gets the instance of the <see cref="Native.ContractManagement"/> class.
-        /// </summary>
-        public static ContractManagement ContractManagement { get; } = new();
-
-        /// <summary>
-        /// Gets the instance of the <see cref="Native.StdLib"/> class.
-        /// </summary>
-        public static StdLib StdLib { get; } = new();
-
-        /// <summary>
-        /// Gets the instance of the <see cref="Native.CryptoLib"/> class.
-        /// </summary>
-        public static CryptoLib CryptoLib { get; } = new();
-
-        /// <summary>
-        /// Gets the instance of the <see cref="LedgerContract"/> class.
-        /// </summary>
-        public static LedgerContract Ledger { get; } = new();
-
-        /// <summary>
-        /// Gets the instance of the <see cref="NeoToken"/> class.
-        /// </summary>
-        public static NeoToken NEO { get; } = new();
-
-        /// <summary>
-        /// Gets the instance of the <see cref="GasToken"/> class.
-        /// </summary>
-        public static GasToken GAS { get; } = new();
-
-        /// <summary>
-        /// Gets the instance of the <see cref="PolicyContract"/> class.
-        /// </summary>
-        public static PolicyContract Policy { get; } = new();
-
-        /// <summary>
-        /// Gets the instance of the <see cref="Native.RoleManagement"/> class.
-        /// </summary>
-        public static RoleManagement RoleManagement { get; } = new();
-
-        /// <summary>
-        /// Gets the instance of the <see cref="OracleContract"/> class.
-        /// </summary>
-        public static OracleContract Oracle { get; } = new();
-
-        #endregion
-
-        /// <summary>
-        /// Gets all native contracts.
-        /// </summary>
-        public static IReadOnlyCollection<NativeContract> Contracts { get; } = s_contractsList;
+        protected readonly NativeContractRepository _repository;
 
         /// <summary>
         /// The name of the native contract.
@@ -128,12 +78,12 @@ namespace Neo.SmartContract.Native
         /// <summary>
         /// The id of the native contract.
         /// </summary>
-        public int Id { get; } = --id_counter;
+        public int Id { get; init; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NativeContract"/> class.
         /// </summary>
-        protected NativeContract()
+        protected NativeContract(NativeContractRepository repository)
         {
             Hash = Helper.GetContractHash(UInt160.Zero, 0, Name);
 
@@ -167,8 +117,9 @@ namespace Neo.SmartContract.Native
                     .Where(u => u is not null)
                     .OrderBy(u => (byte)u)
                     .Cast<Hardfork>().ToImmutableHashSet();
-            s_contractsList.Add(this);
-            s_contractsDictionary.Add(Hash, this);
+
+            Id = repository.RegisterContract(Hash, this);
+            _repository = repository;
         }
 
         /// <summary>
@@ -336,31 +287,9 @@ namespace Neo.SmartContract.Native
             return activeIn <= blockHeight;
         }
 
-        /// <summary>
-        /// Checks whether the committee has witnessed the current transaction.
-        /// </summary>
-        /// <param name="engine">The <see cref="ApplicationEngine"/> that is executing the contract.</param>
-        /// <returns><see langword="true"/> if the committee has witnessed the current transaction; otherwise, <see langword="false"/>.</returns>
-        protected static bool CheckCommittee(ApplicationEngine engine)
-        {
-            UInt160 committeeMultiSigAddr = NEO.GetCommitteeAddress(engine.SnapshotCache);
-            return engine.CheckWitnessInternal(committeeMultiSigAddr);
-        }
-
         private protected KeyBuilder CreateStorageKey(byte prefix)
         {
             return new KeyBuilder(Id, prefix);
-        }
-
-        /// <summary>
-        /// Gets the native contract with the specified hash.
-        /// </summary>
-        /// <param name="hash">The hash of the native contract.</param>
-        /// <returns>The native contract with the specified hash.</returns>
-        public static NativeContract GetContract(UInt160 hash)
-        {
-            s_contractsDictionary.TryGetValue(hash, out var contract);
-            return contract;
         }
 
         internal async void Invoke(ApplicationEngine engine, byte version)
@@ -408,16 +337,6 @@ namespace Neo.SmartContract.Native
             {
                 engine.Throw(ex);
             }
-        }
-
-        /// <summary>
-        /// Determine whether the specified contract is a native contract.
-        /// </summary>
-        /// <param name="hash">The hash of the contract.</param>
-        /// <returns><see langword="true"/> if the contract is native; otherwise, <see langword="false"/>.</returns>
-        public static bool IsNative(UInt160 hash)
-        {
-            return s_contractsDictionary.ContainsKey(hash);
         }
 
         internal virtual ContractTask InitializeAsync(ApplicationEngine engine, Hardfork? hardFork)

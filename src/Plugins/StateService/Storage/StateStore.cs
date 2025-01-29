@@ -115,7 +115,7 @@ namespace Neo.Plugins.StateService.Storage
             using var state_snapshot = Singleton.GetSnapshot();
             StateRoot local_root = state_snapshot.GetStateRoot(state_root.Index);
             if (local_root is null || local_root.Witness != null) return false;
-            if (!state_root.Verify(StatePlugin._system.Settings, StatePlugin._system.StoreView)) return false;
+            if (!state_root.Verify(StatePlugin._system.Settings, StatePlugin._system.StoreView, StatePlugin._system.NativeContractRepository)) return false;
             if (local_root.RootHash != state_root.RootHash) return false;
             state_snapshot.AddValidatedStateRoot(state_root);
             state_snapshot.Commit();

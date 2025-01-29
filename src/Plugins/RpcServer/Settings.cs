@@ -22,9 +22,9 @@ namespace Neo.Plugins.RpcServer
     {
         public IReadOnlyList<RpcServerSettings> Servers { get; init; }
 
-        public Settings(IConfigurationSection section) : base(section)
+        public Settings(IConfigurationSection section, NativeContractRepository nativeContractRepository) : base(section)
         {
-            Servers = section.GetSection(nameof(Servers)).GetChildren().Select(p => RpcServerSettings.Load(p)).ToArray();
+            Servers = section.GetSection(nameof(Servers)).GetChildren().Select(p => RpcServerSettings.Load(p, nativeContractRepository)).ToArray();
         }
     }
 
@@ -55,14 +55,15 @@ namespace Neo.Plugins.RpcServer
         public TimeSpan SessionExpirationTime { get; init; }
         public int FindStoragePageSize { get; init; }
 
-        public static RpcServerSettings Default { get; } = new RpcServerSettings
+        private static RpcServerSettings _default;
+        public static RpcServerSettings GetDefault(NativeContractRepository nativeContractRepository) => _default ??= new RpcServerSettings
         {
             Network = 5195086u,
             BindAddress = IPAddress.None,
             SslCert = string.Empty,
             SslCertPassword = string.Empty,
-            MaxGasInvoke = (long)new BigDecimal(10M, NativeContract.GAS.Decimals).Value,
-            MaxFee = (long)new BigDecimal(0.1M, NativeContract.GAS.Decimals).Value,
+            MaxGasInvoke = (long)new BigDecimal(10M, nativeContractRepository.GAS.Decimals).Value,
+            MaxFee = (long)new BigDecimal(0.1M, nativeContractRepository.GAS.Decimals).Value,
             TrustedAuthorities = Array.Empty<string>(),
             EnableCors = true,
             AllowOrigins = Array.Empty<string>(),
@@ -78,9 +79,9 @@ namespace Neo.Plugins.RpcServer
             FindStoragePageSize = 50
         };
 
-        public static RpcServerSettings Load(IConfigurationSection section) => new()
+        public static RpcServerSettings Load(IConfigurationSection section, NativeContractRepository nativeContractRepository) => new()
         {
-            Network = section.GetValue("Network", Default.Network),
+            Network = section.GetValue("Network", GetDefault(nativeContractRepository).Network),
             BindAddress = IPAddress.Parse(section.GetSection("BindAddress").Value),
             Port = ushort.Parse(section.GetSection("Port").Value),
             SslCert = section.GetSection("SslCert").Value,
@@ -88,20 +89,20 @@ namespace Neo.Plugins.RpcServer
             TrustedAuthorities = section.GetSection("TrustedAuthorities").GetChildren().Select(p => p.Get<string>()).ToArray(),
             RpcUser = section.GetSection("RpcUser").Value,
             RpcPass = section.GetSection("RpcPass").Value,
-            EnableCors = section.GetValue(nameof(EnableCors), Default.EnableCors),
+            EnableCors = section.GetValue(nameof(EnableCors), GetDefault(nativeContractRepository).EnableCors),
             AllowOrigins = section.GetSection(nameof(AllowOrigins)).GetChildren().Select(p => p.Get<string>()).ToArray(),
-            KeepAliveTimeout = section.GetValue(nameof(KeepAliveTimeout), Default.KeepAliveTimeout),
-            RequestHeadersTimeout = section.GetValue(nameof(RequestHeadersTimeout), Default.RequestHeadersTimeout),
-            MaxGasInvoke = (long)new BigDecimal(section.GetValue<decimal>("MaxGasInvoke", Default.MaxGasInvoke), NativeContract.GAS.Decimals).Value,
-            MaxFee = (long)new BigDecimal(section.GetValue<decimal>("MaxFee", Default.MaxFee), NativeContract.GAS.Decimals).Value,
-            MaxIteratorResultItems = section.GetValue("MaxIteratorResultItems", Default.MaxIteratorResultItems),
-            MaxStackSize = section.GetValue("MaxStackSize", Default.MaxStackSize),
+            KeepAliveTimeout = section.GetValue(nameof(KeepAliveTimeout), GetDefault(nativeContractRepository).KeepAliveTimeout),
+            RequestHeadersTimeout = section.GetValue(nameof(RequestHeadersTimeout), GetDefault(nativeContractRepository).RequestHeadersTimeout),
+            MaxGasInvoke = (long)new BigDecimal(section.GetValue<decimal>("MaxGasInvoke", GetDefault(nativeContractRepository).MaxGasInvoke), nativeContractRepository.GAS.Decimals).Value,
+            MaxFee = (long)new BigDecimal(section.GetValue<decimal>("MaxFee", GetDefault(nativeContractRepository).MaxFee), nativeContractRepository.GAS.Decimals).Value,
+            MaxIteratorResultItems = section.GetValue("MaxIteratorResultItems", GetDefault(nativeContractRepository).MaxIteratorResultItems),
+            MaxStackSize = section.GetValue("MaxStackSize", GetDefault(nativeContractRepository).MaxStackSize),
             DisabledMethods = section.GetSection("DisabledMethods").GetChildren().Select(p => p.Get<string>()).ToArray(),
-            MaxConcurrentConnections = section.GetValue("MaxConcurrentConnections", Default.MaxConcurrentConnections),
-            MaxRequestBodySize = section.GetValue("MaxRequestBodySize", Default.MaxRequestBodySize),
-            SessionEnabled = section.GetValue("SessionEnabled", Default.SessionEnabled),
-            SessionExpirationTime = TimeSpan.FromSeconds(section.GetValue("SessionExpirationTime", (int)Default.SessionExpirationTime.TotalSeconds)),
-            FindStoragePageSize = section.GetValue("FindStoragePageSize", Default.FindStoragePageSize)
+            MaxConcurrentConnections = section.GetValue("MaxConcurrentConnections", GetDefault(nativeContractRepository).MaxConcurrentConnections),
+            MaxRequestBodySize = section.GetValue("MaxRequestBodySize", GetDefault(nativeContractRepository).MaxRequestBodySize),
+            SessionEnabled = section.GetValue("SessionEnabled", GetDefault(nativeContractRepository).SessionEnabled),
+            SessionExpirationTime = TimeSpan.FromSeconds(section.GetValue("SessionExpirationTime", (int)GetDefault(nativeContractRepository).SessionExpirationTime.TotalSeconds)),
+            FindStoragePageSize = section.GetValue("FindStoragePageSize", GetDefault(nativeContractRepository).FindStoragePageSize)
         };
     }
 }

@@ -18,10 +18,20 @@ using System.Numerics;
 
 namespace Neo.SmartContract.Native
 {
+    public interface IPolicyContract : INativeContract
+    {
+        long GetFeePerByte(DataCache snapshot);
+        uint GetExecFeeFactor(DataCache snapshot);
+        uint GetStoragePrice(DataCache snapshot);
+        uint GetAttributeFee(DataCache snapshot, byte attributeType);
+        bool IsBlocked(DataCache snapshot, UInt160 account);
+        bool BlockAccount(DataCache snapshot, UInt160 account);
+    }
+
     /// <summary>
     /// A native contract that manages the system policies.
     /// </summary>
-    public sealed class PolicyContract : NativeContract
+    public sealed class PolicyContract : NativeContract, IPolicyContract
     {
         /// <summary>
         /// The default execution fee factor.
@@ -70,7 +80,7 @@ namespace Neo.SmartContract.Native
         private readonly StorageKey _storagePrice;
 
 
-        internal PolicyContract() : base()
+        internal PolicyContract(NativeContractRepository repository) : base(repository)
         {
             _feePerByte = CreateStorageKey(Prefix_FeePerByte);
             _execFeeFactor = CreateStorageKey(Prefix_ExecFeeFactor);
@@ -154,7 +164,7 @@ namespace Neo.SmartContract.Native
         {
             if (!Enum.IsDefined(typeof(TransactionAttributeType), attributeType)) throw new InvalidOperationException();
             if (value > MaxAttributeFee) throw new ArgumentOutOfRangeException(nameof(value));
-            if (!CheckCommittee(engine)) throw new InvalidOperationException();
+            if (!_repository.CheckCommittee(engine)) throw new InvalidOperationException();
 
             engine.SnapshotCache.GetAndChange(CreateStorageKey(Prefix_AttributeFee).Add(attributeType), () => new StorageItem(DefaultAttributeFee)).Set(value);
         }
@@ -163,7 +173,7 @@ namespace Neo.SmartContract.Native
         private void SetFeePerByte(ApplicationEngine engine, long value)
         {
             if (value < 0 || value > 1_00000000) throw new ArgumentOutOfRangeException(nameof(value));
-            if (!CheckCommittee(engine)) throw new InvalidOperationException();
+            if (!_repository.CheckCommittee(engine)) throw new InvalidOperationException();
             engine.SnapshotCache.GetAndChange(_feePerByte).Set(value);
         }
 
@@ -171,7 +181,7 @@ namespace Neo.SmartContract.Native
         private void SetExecFeeFactor(ApplicationEngine engine, uint value)
         {
             if (value == 0 || value > MaxExecFeeFactor) throw new ArgumentOutOfRangeException(nameof(value));
-            if (!CheckCommittee(engine)) throw new InvalidOperationException();
+            if (!_repository.CheckCommittee(engine)) throw new InvalidOperationException();
             engine.SnapshotCache.GetAndChange(_execFeeFactor).Set(value);
         }
 
@@ -179,20 +189,20 @@ namespace Neo.SmartContract.Native
         private void SetStoragePrice(ApplicationEngine engine, uint value)
         {
             if (value == 0 || value > MaxStoragePrice) throw new ArgumentOutOfRangeException(nameof(value));
-            if (!CheckCommittee(engine)) throw new InvalidOperationException();
+            if (!_repository.CheckCommittee(engine)) throw new InvalidOperationException();
             engine.SnapshotCache.GetAndChange(_storagePrice).Set(value);
         }
 
         [ContractMethod(CpuFee = 1 << 15, RequiredCallFlags = CallFlags.States)]
         private bool BlockAccount(ApplicationEngine engine, UInt160 account)
         {
-            if (!CheckCommittee(engine)) throw new InvalidOperationException();
+            if (!_repository.CheckCommittee(engine)) throw new InvalidOperationException();
             return BlockAccount(engine.SnapshotCache, account);
         }
 
-        internal bool BlockAccount(DataCache snapshot, UInt160 account)
+        public bool BlockAccount(DataCache snapshot, UInt160 account)
         {
-            if (IsNative(account)) throw new InvalidOperationException("It's impossible to block a native contract.");
+            if (_repository.IsNative(account)) throw new InvalidOperationException("It's impossible to block a native contract.");
 
             var key = CreateStorageKey(Prefix_BlockedAccount).Add(account);
             if (snapshot.Contains(key)) return false;
@@ -204,7 +214,7 @@ namespace Neo.SmartContract.Native
         [ContractMethod(CpuFee = 1 << 15, RequiredCallFlags = CallFlags.States)]
         private bool UnblockAccount(ApplicationEngine engine, UInt160 account)
         {
-            if (!CheckCommittee(engine)) throw new InvalidOperationException();
+            if (!_repository.CheckCommittee(engine)) throw new InvalidOperationException();
 
             var key = CreateStorageKey(Prefix_BlockedAccount).Add(account);
             if (!engine.SnapshotCache.Contains(key)) return false;

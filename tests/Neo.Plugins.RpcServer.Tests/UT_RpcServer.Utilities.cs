@@ -32,7 +32,7 @@ namespace Neo.Plugins.RpcServer.Tests
         {
             JArray resp = (JArray)_rpcServer.ListPlugins([]);
             Assert.AreEqual(resp.Count, 0);
-            Plugins.Plugin.Plugins.Add(new RpcServerPlugin());
+            TestBlockchain.TheNeoSystem.PluginRepository.Plugins.Add(new RpcServerPlugin());
             resp = (JArray)_rpcServer.ListPlugins([]);
             Assert.AreEqual(resp.Count, 2);
             foreach (JObject p in resp)

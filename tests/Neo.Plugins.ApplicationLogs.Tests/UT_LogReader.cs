@@ -75,8 +75,8 @@ namespace Neo.Plugins.ApplicationsLogs.Tests
                 _memoryStore = new MemoryStore();
                 _memoryStoreProvider = new TestMemoryStoreProvider(_memoryStore);
                 logReader = new LogReader();
-                Plugin.Plugins.Add(logReader);  // initialize before NeoSystem to let NeoSystem load the plugin
-                _neoSystem = new NeoSystem(TestProtocolSettings.SoleNode with { Network = ApplicationLogs.Settings.Default.Network }, _memoryStoreProvider);
+                TestBlockchain.TheNeoSystem.PluginRepository.Plugins.Add(logReader);  // initialize before NeoSystem to let NeoSystem load the plugin
+                _neoSystem = new NeoSystem(TestProtocolSettings.SoleNode with { Network = ApplicationLogs.Settings.Default.Network }, TestBlockchain.TheNeoSystem.PluginRepository, _memoryStoreProvider, TestBlockchain.TheNeoSystem.NativeContractRepository);
                 _walletAccount = _wallet.Import("KxuRSsHgJMb3AMSN6B9P3JHNGMFtxmuimqgR9MmXPcv3CLLfusTd");
 
                 NeoSystem system = _neoSystem;
@@ -84,7 +84,7 @@ namespace Neo.Plugins.ApplicationsLogs.Tests
                     new Transaction
                     {
                         Nonce = 233,
-                        ValidUntilBlock = NativeContract.Ledger.CurrentIndex(system.GetSnapshotCache()) + system.Settings.MaxValidUntilBlockIncrement,
+                        ValidUntilBlock = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CurrentIndex(system.GetSnapshotCache()) + system.Settings.MaxValidUntilBlockIncrement,
                         Signers = [new Signer() { Account = MultisigScriptHash, Scopes = WitnessScope.CalledByEntry }],
                         Attributes = Array.Empty<TransactionAttribute>(),
                         Script = Convert.FromBase64String(NeoTransferScript),
@@ -150,7 +150,7 @@ namespace Neo.Plugins.ApplicationsLogs.Tests
             Assert.Equal(executions[1]["trigger"], "PostPersist");
             JArray notifications = (JArray)executions[1]["notifications"];
             Assert.Equal(notifications.Count, 1);
-            Assert.Equal(notifications[0]["contract"], GasToken.GAS.Hash.ToString());
+            Assert.Equal(notifications[0]["contract"], TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Hash.ToString());
             Assert.Equal(notifications[0]["eventname"], "Transfer");  // from null to Validator
             Assert.Equal(notifications[0]["state"]["value"][0]["type"], nameof(ContractParameterType.Any));
             Assert.Equal(Convert.FromBase64String(notifications[0]["state"]["value"][1]["value"].AsString()), ValidatorScriptHash.ToArray());
@@ -169,10 +169,10 @@ namespace Neo.Plugins.ApplicationsLogs.Tests
             notifications = (JArray)executions[0]["notifications"];
             Assert.Equal(notifications.Count, 2);
             Assert.Equal(notifications[0]["eventname"].AsString(), "Transfer");
-            Assert.Equal(notifications[0]["contract"].AsString(), NeoToken.NEO.Hash.ToString());
+            Assert.Equal(notifications[0]["contract"].AsString(), TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Hash.ToString());
             Assert.Equal(notifications[0]["state"]["value"][2]["value"], "1");
             Assert.Equal(notifications[1]["eventname"].AsString(), "Transfer");
-            Assert.Equal(notifications[1]["contract"].AsString(), GasToken.GAS.Hash.ToString());
+            Assert.Equal(notifications[1]["contract"].AsString(), TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Hash.ToString());
             Assert.Equal(notifications[1]["state"]["value"][2]["value"], "50000000");
         }
 
@@ -185,7 +185,7 @@ namespace Neo.Plugins.ApplicationsLogs.Tests
 
             _neoSystemFixture.logReader.OnGetBlockCommand("1");
             _neoSystemFixture.logReader.OnGetBlockCommand(block.Hash.ToString());
-            _neoSystemFixture.logReader.OnGetContractCommand(NeoToken.NEO.Hash);
+            _neoSystemFixture.logReader.OnGetContractCommand(TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Hash);
             _neoSystemFixture.logReader.OnGetTransactionCommand(_neoSystemFixture.txs[0].Hash);
 
             BlockchainExecutionModel blockLog = _neoSystemFixture.logReader._neostore.GetBlockLog(block.Hash, TriggerType.Application);
@@ -196,18 +196,18 @@ namespace Neo.Plugins.ApplicationsLogs.Tests
                 Assert.Equal(log.Stack[0].GetBoolean(), true);
                 Assert.Equal(log.Notifications.Count(), 2);
                 Assert.Equal(log.Notifications[0].EventName, "Transfer");
-                Assert.Equal(log.Notifications[0].ScriptHash, NeoToken.NEO.Hash);
+                Assert.Equal(log.Notifications[0].ScriptHash, TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Hash);
                 Assert.Equal(log.Notifications[0].State[2], 1);
                 Assert.Equal(log.Notifications[1].EventName, "Transfer");
-                Assert.Equal(log.Notifications[1].ScriptHash, GasToken.GAS.Hash);
+                Assert.Equal(log.Notifications[1].ScriptHash, TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Hash);
                 Assert.Equal(log.Notifications[1].State[2], 50000000);
             }
 
-            List<(BlockchainEventModel eventLog, UInt256 txHash)> neoLogs = _neoSystemFixture.logReader._neostore.GetContractLog(NeoToken.NEO.Hash, TriggerType.Application).ToList();
+            List<(BlockchainEventModel eventLog, UInt256 txHash)> neoLogs = _neoSystemFixture.logReader._neostore.GetContractLog(TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Hash, TriggerType.Application).ToList();
             Assert.Equal(neoLogs.Count, 1);
             Assert.Equal(neoLogs[0].txHash, _neoSystemFixture.txs[0].Hash);
             Assert.Equal(neoLogs[0].eventLog.EventName, "Transfer");
-            Assert.Equal(neoLogs[0].eventLog.ScriptHash, NeoToken.NEO.Hash);
+            Assert.Equal(neoLogs[0].eventLog.ScriptHash, TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Hash);
             Assert.Equal(neoLogs[0].eventLog.State[2], 1);
         }
     }

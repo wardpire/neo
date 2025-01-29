@@ -34,13 +34,13 @@ namespace Neo.Plugins.RpcServer
             {
                 Version = 0,
                 Nonce = (uint)random.Next(),
-                ValidUntilBlock = NativeContract.Ledger.CurrentIndex(Snapshot) + system.Settings.MaxValidUntilBlockIncrement,
+                ValidUntilBlock = system.NativeContractRepository.Ledger.CurrentIndex(Snapshot) + system.Settings.MaxValidUntilBlockIncrement,
                 Signers = signers,
                 Attributes = Array.Empty<TransactionAttribute>(),
                 Script = script,
                 Witnesses = witnesses
             };
-            Engine = ApplicationEngine.Run(script, Snapshot, container: tx, settings: system.Settings, gas: datoshi, diagnostic: diagnostic);
+            Engine = ApplicationEngine.Run(script, Snapshot,system.NativeContractRepository, container: tx, settings: system.Settings, gas: datoshi, diagnostic: diagnostic);
             ResetExpiration();
         }
 

@@ -239,10 +239,10 @@ namespace Neo.Plugins.OracleService
 
             using (var snapshot = _system.GetSnapshotCache())
             {
-                uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
-                var oracles = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
+                uint height = _system.NativeContractRepository.Ledger.CurrentIndex(snapshot) + 1;
+                var oracles = _system.NativeContractRepository.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
                 oracles.Any(p => p.Equals(oraclePub)).True_Or(RpcErrorFactory.OracleNotDesignatedNode(oraclePub));
-                NativeContract.Oracle.GetRequest(snapshot, requestId).NotNull_Or(RpcError.OracleRequestNotFound);
+                _system.NativeContractRepository.Oracle.GetRequest(snapshot, requestId).NotNull_Or(RpcError.OracleRequestNotFound);
                 byte[] data = [.. oraclePub.ToArray(), .. BitConverter.GetBytes(requestId), .. txSign];
                 Crypto.VerifySignature(data, msgSign, oraclePub).True_Or(RpcErrorFactory.InvalidSignature($"Invalid oracle response transaction signature from '{oraclePub}'."));
                 AddResponseTxSign(snapshot, requestId, oraclePub, txSign);
@@ -278,14 +278,14 @@ namespace Neo.Plugins.OracleService
         {
             Log($"[{req.OriginalTxid}] Process oracle request start:<{req.Url}>");
 
-            uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
+            uint height = _system.NativeContractRepository.Ledger.CurrentIndex(snapshot) + 1;
 
             (OracleResponseCode code, string data) = await ProcessUrlAsync(req.Url);
 
             Log($"[{req.OriginalTxid}] Process oracle request end:<{req.Url}>, responseCode:{code}, response:{data}");
 
-            var oracleNodes = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
-            foreach (var (requestId, request) in NativeContract.Oracle.GetRequestsByUrl(snapshot, req.Url))
+            var oracleNodes = _system.NativeContractRepository.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
+            foreach (var (requestId, request) in _system.NativeContractRepository.Oracle.GetRequestsByUrl(snapshot, req.Url))
             {
                 var result = Array.Empty<byte>();
                 if (code == OracleResponseCode.Success)
@@ -301,13 +301,13 @@ namespace Neo.Plugins.OracleService
                     }
                 }
                 var response = new OracleResponse() { Id = requestId, Code = code, Result = result };
-                var responseTx = CreateResponseTx(snapshot, request, response, oracleNodes, _system.Settings);
-                var backupTx = CreateResponseTx(snapshot, request, new OracleResponse() { Code = OracleResponseCode.ConsensusUnreachable, Id = requestId, Result = Array.Empty<byte>() }, oracleNodes, _system.Settings, true);
+                var responseTx = CreateResponseTx(snapshot, request, response, oracleNodes, _system.Settings, _system.NativeContractRepository);
+                var backupTx = CreateResponseTx(snapshot, request, new OracleResponse() { Code = OracleResponseCode.ConsensusUnreachable, Id = requestId, Result = Array.Empty<byte>() }, oracleNodes, _system.Settings,_system.NativeContractRepository, true);
 
                 Log($"[{req.OriginalTxid}]-({requestId}) Built response tx[[{responseTx.Hash}]], responseCode:{code}, result:{result.ToHexString()}, validUntilBlock:{responseTx.ValidUntilBlock}, backupTx:{backupTx.Hash}-{backupTx.ValidUntilBlock}");
 
                 List<Task> tasks = new List<Task>();
-                ECPoint[] oraclePublicKeys = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
+                ECPoint[] oraclePublicKeys = _system.NativeContractRepository.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
                 foreach (var account in wallet.GetAccounts())
                 {
                     var oraclePub = account.GetKey()?.PublicKey;
@@ -332,7 +332,7 @@ namespace Neo.Plugins.OracleService
                 using (var snapshot = _system.GetSnapshotCache())
                 {
                     SyncPendingQueue(snapshot);
-                    foreach (var (id, request) in NativeContract.Oracle.GetRequests(snapshot))
+                    foreach (var (id, request) in _system.NativeContractRepository.Oracle.GetRequests(snapshot))
                     {
                         if (cancelSource.IsCancellationRequested) break;
                         if (!finishedCache.ContainsKey(id) && (!pendingQueue.TryGetValue(id, out OracleTask task) || task.Tx is null))
@@ -349,7 +349,7 @@ namespace Neo.Plugins.OracleService
 
         private void SyncPendingQueue(DataCache snapshot)
         {
-            var offChainRequests = NativeContract.Oracle.GetRequests(snapshot).ToDictionary(r => r.Item1, r => r.Item2);
+            var offChainRequests = _system.NativeContractRepository.Oracle.GetRequests(snapshot).ToDictionary(r => r.Item1, r => r.Item2);
             var onChainRequests = pendingQueue.Keys.Except(offChainRequests.Keys);
             foreach (var onChainRequest in onChainRequests)
             {
@@ -377,13 +377,13 @@ namespace Neo.Plugins.OracleService
             }
         }
 
-        public static Transaction CreateResponseTx(DataCache snapshot, OracleRequest request, OracleResponse response, ECPoint[] oracleNodes, ProtocolSettings settings, bool useCurrentHeight = false)
+        public static Transaction CreateResponseTx(DataCache snapshot, OracleRequest request, OracleResponse response, ECPoint[] oracleNodes, ProtocolSettings settings, NativeContractRepository nativeContractRepository, bool useCurrentHeight = false)
         {
-            var requestTx = NativeContract.Ledger.GetTransactionState(snapshot, request.OriginalTxid);
+            var requestTx = nativeContractRepository.Ledger.GetTransactionState(snapshot, request.OriginalTxid);
             var n = oracleNodes.Length;
             var m = n - (n - 1) / 3;
             var oracleSignContract = Contract.CreateMultiSigContract(m, oracleNodes);
-            uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+            uint height = nativeContractRepository.Ledger.CurrentIndex(snapshot);
             var validUntilBlock = requestTx.BlockIndex + settings.MaxValidUntilBlockIncrement;
             while (useCurrentHeight && validUntilBlock <= height)
             {
@@ -398,7 +398,7 @@ namespace Neo.Plugins.OracleService
                 {
                     new Signer
                     {
-                        Account = NativeContract.Oracle.Hash,
+                        Account = nativeContractRepository.Oracle.Hash,
                         Scopes = WitnessScope.None
                     },
                     new Signer
@@ -408,7 +408,7 @@ namespace Neo.Plugins.OracleService
                     }
                 },
                 Attributes = new[] { response },
-                Script = OracleResponse.FixedScript,
+                Script = OracleResponse.GetFixedScript(nativeContractRepository),
                 Witnesses = new Witness[2]
             };
             Dictionary<UInt160, Witness> witnessDict = new Dictionary<UInt160, Witness>
@@ -418,27 +418,27 @@ namespace Neo.Plugins.OracleService
                     InvocationScript = Array.Empty<byte>(),
                     VerificationScript = oracleSignContract.Script,
                 },
-                [NativeContract.Oracle.Hash] = new Witness
+                [nativeContractRepository.Oracle.Hash] = new Witness
                 {
                     InvocationScript = Array.Empty<byte>(),
                     VerificationScript = Array.Empty<byte>(),
                 }
             };
 
-            UInt160[] hashes = tx.GetScriptHashesForVerifying(snapshot);
+            UInt160[] hashes = tx.GetScriptHashesForVerifying(snapshot, nativeContractRepository);
             tx.Witnesses[0] = witnessDict[hashes[0]];
             tx.Witnesses[1] = witnessDict[hashes[1]];
 
             // Calculate network fee
 
-            var oracleContract = NativeContract.ContractManagement.GetContract(snapshot, NativeContract.Oracle.Hash);
-            var engine = ApplicationEngine.Create(TriggerType.Verification, tx, snapshot.CloneCache(), settings: settings);
+            var oracleContract = nativeContractRepository.ContractManagement.GetContract(snapshot, nativeContractRepository.Oracle.Hash);
+            var engine = ApplicationEngine.Create(TriggerType.Verification, tx, snapshot.CloneCache(), nativeContractRepository, settings: settings);
             ContractMethodDescriptor md = oracleContract.Manifest.Abi.GetMethod(ContractBasicMethod.Verify, ContractBasicMethod.VerifyPCount);
             engine.LoadContract(oracleContract, md, CallFlags.None);
             if (engine.Execute() != VMState.HALT) return null;
             tx.NetworkFee += engine.FeeConsumed;
 
-            var executionFactor = NativeContract.Policy.GetExecFeeFactor(snapshot);
+            var executionFactor = nativeContractRepository.Policy.GetExecFeeFactor(snapshot);
             var networkFee = executionFactor * SmartContract.Helper.MultiSignatureContractCost(m, n);
             tx.NetworkFee += networkFee;
 
@@ -446,10 +446,10 @@ namespace Neo.Plugins.OracleService
 
             int size_inv = 66 * m;
             int size = Transaction.HeaderSize + tx.Signers.GetVarSize() + tx.Script.GetVarSize()
-                + UnsafeData.GetVarSize(hashes.Length) + witnessDict[NativeContract.Oracle.Hash].Size
+                + UnsafeData.GetVarSize(hashes.Length) + witnessDict[nativeContractRepository.Oracle.Hash].Size
                 + UnsafeData.GetVarSize(size_inv) + size_inv + oracleSignContract.Script.GetVarSize();
 
-            var feePerByte = NativeContract.Policy.GetFeePerByte(snapshot);
+            var feePerByte = nativeContractRepository.Policy.GetFeePerByte(snapshot);
             if (response.Result.Length > OracleResponse.MaxResultSize)
             {
                 response.Code = OracleResponseCode.ResponseTooLarge;
@@ -475,7 +475,7 @@ namespace Neo.Plugins.OracleService
             var task = pendingQueue.GetOrAdd(requestId, _ => new OracleTask
             {
                 Id = requestId,
-                Request = NativeContract.Oracle.GetRequest(snapshot, requestId),
+                Request = _system.NativeContractRepository.Oracle.GetRequest(snapshot, requestId),
                 Signs = new ConcurrentDictionary<ECPoint, byte[]>(),
                 BackupSigns = new ConcurrentDictionary<ECPoint, byte[]>()
             });
@@ -526,12 +526,12 @@ namespace Neo.Plugins.OracleService
 
         private bool CheckTxSign(DataCache snapshot, Transaction tx, ConcurrentDictionary<ECPoint, byte[]> OracleSigns)
         {
-            uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
+            uint height = _system.NativeContractRepository.Ledger.CurrentIndex(snapshot) + 1;
             if (tx.ValidUntilBlock <= height)
             {
                 return false;
             }
-            ECPoint[] oraclesNodes = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
+            ECPoint[] oraclesNodes = _system.NativeContractRepository.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
             int neededThreshold = oraclesNodes.Length - (oraclesNodes.Length - 1) / 3;
             if (OracleSigns.Count >= neededThreshold)
             {
@@ -542,7 +542,7 @@ namespace Neo.Plugins.OracleService
                     sb.EmitPush(sign);
                     if (--neededThreshold == 0) break;
                 }
-                var idx = tx.GetScriptHashesForVerifying(snapshot)[0] == contract.ScriptHash ? 0 : 1;
+                var idx = tx.GetScriptHashesForVerifying(snapshot,_system.NativeContractRepository)[0] == contract.ScriptHash ? 0 : 1;
                 tx.Witnesses[idx].InvocationScript = sb.ToArray();
 
                 Log($"Send response tx: responseTx={tx.Hash}");
@@ -553,10 +553,10 @@ namespace Neo.Plugins.OracleService
             return false;
         }
 
-        private static bool CheckOracleAvailable(DataCache snapshot, out ECPoint[] oracles)
+        private bool CheckOracleAvailable(DataCache snapshot, out ECPoint[] oracles)
         {
-            uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
-            oracles = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
+            uint height = _system.NativeContractRepository.Ledger.CurrentIndex(snapshot) + 1;
+            oracles = _system.NativeContractRepository.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
             return oracles.Length > 0;
         }
 

@@ -23,7 +23,7 @@ namespace Neo.Plugins.StorageDumper
     public class StorageDumper : Plugin, ICommittingHandler, ICommittedHandler
     {
         private readonly Dictionary<uint, NeoSystem> systems = new Dictionary<uint, NeoSystem>();
-
+        private readonly NativeContractRepository _nativeContractRepository;
         private StreamWriter? _writer;
         /// <summary>
         /// _currentBlock stores the last cached item
@@ -36,10 +36,11 @@ namespace Neo.Plugins.StorageDumper
 
         public override string ConfigFile => System.IO.Path.Combine(RootPath, "StorageDumper.json");
 
-        public StorageDumper()
+        public StorageDumper(NativeContractRepository nativeContract)
         {
             Blockchain.Committing += ((ICommittingHandler)this).Blockchain_Committing_Handler;
             Blockchain.Committed += ((ICommittedHandler)this).Blockchain_Committed_Handler;
+            _nativeContractRepository = nativeContract;
         }
 
         public override void Dispose()
@@ -50,11 +51,11 @@ namespace Neo.Plugins.StorageDumper
 
         protected override void Configure()
         {
-            Settings.Load(GetConfiguration());
         }
 
         protected override void OnSystemLoaded(NeoSystem system)
         {
+            Settings.Load(GetConfiguration(), system.NativeContractRepository);
             systems.Add(system.Settings.Network, system);
         }
 
@@ -69,7 +70,7 @@ namespace Neo.Plugins.StorageDumper
             byte[]? prefix = null;
             if (contractHash is not null)
             {
-                var contract = NativeContract.ContractManagement.GetContract(systems[network].StoreView, contractHash);
+                var contract = _nativeContractRepository.ContractManagement.GetContract(systems[network].StoreView, contractHash);
                 if (contract is null) throw new InvalidOperationException("contract not found");
                 prefix = BitConverter.GetBytes(contract.Id);
             }
@@ -94,7 +95,7 @@ namespace Neo.Plugins.StorageDumper
 
         private void OnPersistStorage(uint network, DataCache snapshot)
         {
-            uint blockIndex = NativeContract.Ledger.CurrentIndex(snapshot);
+            uint blockIndex = _nativeContractRepository.Ledger.CurrentIndex(snapshot);
             if (blockIndex >= Settings.Default!.HeightToBegin)
             {
                 JArray stateChangeArray = new JArray();
@@ -149,7 +150,7 @@ namespace Neo.Plugins.StorageDumper
 
         private void InitFileWriter(uint network, DataCache snapshot)
         {
-            uint blockIndex = NativeContract.Ledger.CurrentIndex(snapshot);
+            uint blockIndex = _nativeContractRepository.Ledger.CurrentIndex(snapshot);
             if (_writer == null
                 || blockIndex % Settings.Default!.BlockCacheSize == 0)
             {

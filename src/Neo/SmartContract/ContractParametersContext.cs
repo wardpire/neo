@@ -15,6 +15,7 @@ using Neo.IO;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
+using Neo.SmartContract.Native;
 using Neo.VM;
 using System;
 using System.Collections.Generic;
@@ -91,7 +92,7 @@ namespace Neo.SmartContract
         /// The magic number of the network.
         /// </summary>
         public readonly uint Network;
-
+        private readonly NativeContractRepository _nativeContractRepository;
         private readonly Dictionary<UInt160, ContextItem> ContextItems;
 
         /// <summary>
@@ -111,7 +112,7 @@ namespace Neo.SmartContract
         /// <summary>
         /// Gets the script hashes to be verified for the <see cref="Verifiable"/>.
         /// </summary>
-        public IReadOnlyList<UInt160> ScriptHashes => _ScriptHashes ??= Verifiable.GetScriptHashesForVerifying(SnapshotCache);
+        public IReadOnlyList<UInt160> ScriptHashes => _ScriptHashes ??= Verifiable.GetScriptHashesForVerifying(SnapshotCache, _nativeContractRepository);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ContractParametersContext"/> class.
@@ -119,12 +120,13 @@ namespace Neo.SmartContract
         /// <param name="snapshotCache">The snapshot used to read data.</param>
         /// <param name="verifiable">The <see cref="IVerifiable"/> to add witnesses.</param>
         /// <param name="network">The magic number of the network.</param>
-        public ContractParametersContext(DataCache snapshotCache, IVerifiable verifiable, uint network)
+        public ContractParametersContext(DataCache snapshotCache, IVerifiable verifiable, uint network, NativeContractRepository nativeContractRepository)
         {
             Verifiable = verifiable;
             SnapshotCache = snapshotCache;
             ContextItems = new Dictionary<UInt160, ContextItem>();
             Network = network;
+            _nativeContractRepository = nativeContractRepository;
         }
 
         /// <summary>
@@ -236,7 +238,7 @@ namespace Neo.SmartContract
         /// <param name="json">The context represented by a JSON object.</param>
         /// <param name="snapshot">The snapshot used to read data.</param>
         /// <returns>The converted context.</returns>
-        public static ContractParametersContext FromJson(JObject json, DataCache snapshot)
+        public static ContractParametersContext FromJson(JObject json, DataCache snapshot, NativeContractRepository nativeContractRepository)
         {
             var type = typeof(ContractParametersContext).GetTypeInfo().Assembly.GetType(json["type"].AsString());
             if (!typeof(IVerifiable).IsAssignableFrom(type)) throw new FormatException();
@@ -250,7 +252,7 @@ namespace Neo.SmartContract
                 UInt256 hash = UInt256.Parse(json["hash"].GetString());
                 if (hash != verifiable.Hash) throw new FormatException();
             }
-            ContractParametersContext context = new(snapshot, verifiable, (uint)json["network"].GetInt32());
+            ContractParametersContext context = new(snapshot, verifiable, (uint)json["network"].GetInt32(), nativeContractRepository);
             foreach (var (key, value) in ((JObject)json["items"]).Properties)
             {
                 context.ContextItems.Add(UInt160.Parse(key), new ContextItem((JObject)value));
@@ -337,9 +339,9 @@ namespace Neo.SmartContract
         /// <param name="value">The JSON <see cref="string"/>.</param>
         /// <param name="snapshot">The snapshot used to read data.</param>
         /// <returns>The parsed context.</returns>
-        public static ContractParametersContext Parse(string value, DataCache snapshot)
+        public static ContractParametersContext Parse(string value, DataCache snapshot, NativeContractRepository nativeContractRepository)
         {
-            return FromJson((JObject)JToken.Parse(value), snapshot);
+            return FromJson((JObject)JToken.Parse(value), snapshot, nativeContractRepository);
         }
 
         /// <summary>

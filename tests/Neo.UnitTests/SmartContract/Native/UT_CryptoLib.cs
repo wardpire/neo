@@ -48,9 +48,9 @@ namespace Neo.UnitTests.SmartContract.Native
         {
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             using ScriptBuilder script = new();
-            script.EmitDynamicCall(NativeContract.CryptoLib.Hash, "bls12381Deserialize", g1);
+            script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "bls12381Deserialize", g1);
 
-            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings);
             engine.LoadScript(script.ToArray());
             Assert.AreEqual(VMState.HALT, engine.Execute());
             var result = engine.ResultStack.Pop();
@@ -62,9 +62,9 @@ namespace Neo.UnitTests.SmartContract.Native
         {
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             using ScriptBuilder script = new();
-            script.EmitDynamicCall(NativeContract.CryptoLib.Hash, "bls12381Deserialize", g2);
+            script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "bls12381Deserialize", g2);
 
-            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings);
             engine.LoadScript(script.ToArray());
             Assert.AreEqual(VMState.HALT, engine.Execute());
             var result = engine.ResultStack.Pop();
@@ -76,9 +76,9 @@ namespace Neo.UnitTests.SmartContract.Native
         {
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             using ScriptBuilder script = new();
-            script.EmitDynamicCall(NativeContract.CryptoLib.Hash, "bls12381Deserialize", not_g1);
+            script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "bls12381Deserialize", not_g1);
 
-            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings);
             engine.LoadScript(script.ToArray());
             Assert.AreEqual(VMState.FAULT, engine.Execute());
         }
@@ -88,9 +88,9 @@ namespace Neo.UnitTests.SmartContract.Native
         {
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             using ScriptBuilder script = new();
-            script.EmitDynamicCall(NativeContract.CryptoLib.Hash, "bls12381Deserialize", not_g2);
+            script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "bls12381Deserialize", not_g2);
 
-            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings);
             engine.LoadScript(script.ToArray());
             Assert.AreEqual(VMState.FAULT, engine.Execute());
         }
@@ -99,16 +99,16 @@ namespace Neo.UnitTests.SmartContract.Native
         {
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             using ScriptBuilder script = new();
-            script.EmitDynamicCall(NativeContract.CryptoLib.Hash, "bls12381Deserialize", gt);
-            script.EmitDynamicCall(NativeContract.CryptoLib.Hash, "bls12381Deserialize", gt);
+            script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "bls12381Deserialize", gt);
+            script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "bls12381Deserialize", gt);
             script.EmitPush(2);
             script.Emit(OpCode.PACK);
             script.EmitPush(CallFlags.All);
             script.EmitPush("bls12381Add");
-            script.EmitPush(NativeContract.CryptoLib.Hash);
+            script.EmitPush(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash);
             script.EmitSysCall(ApplicationEngine.System_Contract_Call);
 
-            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings);
             engine.LoadScript(script.ToArray());
             Assert.AreEqual(VMState.HALT, engine.Execute());
             var result = engine.ResultStack.Pop();
@@ -125,15 +125,15 @@ namespace Neo.UnitTests.SmartContract.Native
             {
                 script.EmitPush(false);
                 script.EmitPush(data);
-                script.EmitDynamicCall(NativeContract.CryptoLib.Hash, "bls12381Deserialize", gt);
+                script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "bls12381Deserialize", gt);
                 script.EmitPush(3);
                 script.Emit(OpCode.PACK);
                 script.EmitPush(CallFlags.All);
                 script.EmitPush("bls12381Mul");
-                script.EmitPush(NativeContract.CryptoLib.Hash);
+                script.EmitPush(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash);
                 script.EmitSysCall(ApplicationEngine.System_Contract_Call);
 
-                using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings);
+                using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings);
                 engine.LoadScript(script.ToArray());
                 Assert.AreEqual(VMState.HALT, engine.Execute());
                 var result = engine.ResultStack.Pop();
@@ -143,15 +143,15 @@ namespace Neo.UnitTests.SmartContract.Native
             {
                 script.EmitPush(true);
                 script.EmitPush(data);
-                script.EmitDynamicCall(NativeContract.CryptoLib.Hash, "bls12381Deserialize", gt);
+                script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "bls12381Deserialize", gt);
                 script.EmitPush(3);
                 script.Emit(OpCode.PACK);
                 script.EmitPush(CallFlags.All);
                 script.EmitPush("bls12381Mul");
-                script.EmitPush(NativeContract.CryptoLib.Hash);
+                script.EmitPush(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash);
                 script.EmitSysCall(ApplicationEngine.System_Contract_Call);
 
-                using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings);
+                using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings);
                 engine.LoadScript(script.ToArray());
                 Assert.AreEqual(VMState.HALT, engine.Execute());
                 var result = engine.ResultStack.Pop();
@@ -164,16 +164,16 @@ namespace Neo.UnitTests.SmartContract.Native
         {
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             using ScriptBuilder script = new();
-            script.EmitDynamicCall(NativeContract.CryptoLib.Hash, "bls12381Deserialize", g2);
-            script.EmitDynamicCall(NativeContract.CryptoLib.Hash, "bls12381Deserialize", g1);
+            script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "bls12381Deserialize", g2);
+            script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "bls12381Deserialize", g1);
             script.EmitPush(2);
             script.Emit(OpCode.PACK);
             script.EmitPush(CallFlags.All);
             script.EmitPush("bls12381Pairing");
-            script.EmitPush(NativeContract.CryptoLib.Hash);
+            script.EmitPush(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash);
             script.EmitSysCall(ApplicationEngine.System_Contract_Call);
 
-            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings);
             engine.LoadScript(script.ToArray());
             Assert.AreEqual(VMState.HALT, engine.Execute());
             var result = engine.ResultStack.Pop();
@@ -185,16 +185,16 @@ namespace Neo.UnitTests.SmartContract.Native
         {
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             using ScriptBuilder script = new();
-            script.EmitDynamicCall(NativeContract.CryptoLib.Hash, "bls12381Deserialize", g1);
-            script.EmitDynamicCall(NativeContract.CryptoLib.Hash, "bls12381Deserialize", g1);
+            script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "bls12381Deserialize", g1);
+            script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "bls12381Deserialize", g1);
             script.EmitPush(2);
             script.Emit(OpCode.PACK);
             script.EmitPush(CallFlags.All);
             script.EmitPush("bls12381Equal");
-            script.EmitPush(NativeContract.CryptoLib.Hash);
+            script.EmitPush(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash);
             script.EmitSysCall(ApplicationEngine.System_Contract_Call);
 
-            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings);
             engine.LoadScript(script.ToArray());
             Assert.AreEqual(VMState.HALT, engine.Execute());
             var result = engine.ResultStack.Pop();
@@ -217,15 +217,15 @@ namespace Neo.UnitTests.SmartContract.Native
             {
                 script.EmitPush(negative);
                 script.EmitPush(mul.ToLower().HexToBytes());
-                script.EmitDynamicCall(NativeContract.CryptoLib.Hash, "bls12381Deserialize", point.ToLower().HexToBytes());
+                script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "bls12381Deserialize", point.ToLower().HexToBytes());
                 script.EmitPush(3);
                 script.Emit(OpCode.PACK);
                 script.EmitPush(CallFlags.All);
                 script.EmitPush("bls12381Mul");
-                script.EmitPush(NativeContract.CryptoLib.Hash);
+                script.EmitPush(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash);
                 script.EmitSysCall(ApplicationEngine.System_Contract_Call);
 
-                using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings);
+                using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings);
                 engine.LoadScript(script.ToArray());
                 Assert.AreEqual(VMState.HALT, engine.Execute());
                 var result = engine.ResultStack.Pop();
@@ -476,7 +476,7 @@ namespace Neo.UnitTests.SmartContract.Native
 
             // Continue construction of 'verifyWithECDsa' call.
             vrf.Emit(OpCode.PUSH4, OpCode.PACK); // pack arguments for 'verifyWithECDsa' call.
-            EmitAppCallNoArgs(vrf, CryptoLib.CryptoLib.Hash, "verifyWithECDsa", CallFlags.None); // emit the call to 'verifyWithECDsa' itself.
+            EmitAppCallNoArgs(vrf, TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "verifyWithECDsa", CallFlags.None); // emit the call to 'verifyWithECDsa' itself.
 
             // Account is a hash of verification script.
             var vrfScript = vrf.ToArray();
@@ -505,18 +505,18 @@ namespace Neo.UnitTests.SmartContract.Native
                 new Witness { InvocationScript = inv.ToArray(), VerificationScript = vrfScript }
             ];
 
-            tx.VerifyStateIndependent(TestProtocolSettings.Default).Should().Be(VerifyResult.Succeed);
+            tx.VerifyStateIndependent(TestProtocolSettings.Default, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().Be(VerifyResult.Succeed);
 
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
 
             // Create fake balance to pay the fees.
-            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
-            _ = NativeContract.GAS.Mint(engine, acc, 5_0000_0000, false);
+            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(engine, acc, 5_0000_0000, false);
             snapshotCache.Commit();
 
             var txVrfContext = new TransactionVerificationContext();
             var conflicts = new List<Transaction>();
-            tx.VerifyStateDependent(TestProtocolSettings.Default, snapshotCache, txVrfContext, conflicts).Should().Be(VerifyResult.Succeed);
+            tx.VerifyStateDependent(TestProtocolSettings.Default, snapshotCache, txVrfContext, TestBlockchain.TheNeoSystem.NativeContractRepository, conflicts).Should().Be(VerifyResult.Succeed);
 
             // The resulting witness verification cost is 2154270   * 10e-8GAS.
             // The resulting witness Invocation script (66 bytes length):
@@ -693,7 +693,7 @@ namespace Neo.UnitTests.SmartContract.Native
                 OpCode.PICKITEM,           // pick pub at index pubCnt.
                 OpCode.LDLOC2,             // load msg.
                 OpCode.PUSH4, OpCode.PACK); // pack 4 arguments for 'verifyWithECDsa' call.
-            EmitAppCallNoArgs(vrf, CryptoLib.CryptoLib.Hash, "verifyWithECDsa", CallFlags.None); // emit the call to 'verifyWithECDsa' itself.
+            EmitAppCallNoArgs(vrf, TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash, "verifyWithECDsa", CallFlags.None); // emit the call to 'verifyWithECDsa' itself.
 
             // Update loop variables.
             vrf.Emit(OpCode.LDLOC3, OpCode.ADD, OpCode.STLOC3, // increment sigCnt if signature is valid.
@@ -746,13 +746,13 @@ namespace Neo.UnitTests.SmartContract.Native
                 new Witness { InvocationScript = inv.ToArray(), VerificationScript = vrfScript }
             ];
 
-            tx.VerifyStateIndependent(TestProtocolSettings.Default).Should().Be(VerifyResult.Succeed);
+            tx.VerifyStateIndependent(TestProtocolSettings.Default, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().Be(VerifyResult.Succeed);
 
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
 
             // Create fake balance to pay the fees.
-            var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
-            _ = NativeContract.GAS.Mint(engine, acc, 5_0000_0000, false);
+            var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings, gas: long.MaxValue);
+            _ = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Mint(engine, acc, 5_0000_0000, false);
 
             // We should not use commit here cause once its committed, the value we get from the snapshot can be different
             // from the underline storage. Thought there isn't any issue triggered here, its wrong to use it this way.
@@ -762,7 +762,7 @@ namespace Neo.UnitTests.SmartContract.Native
             // Check that witness verification passes.
             var txVrfContext = new TransactionVerificationContext();
             var conflicts = new List<Transaction>();
-            tx.VerifyStateDependent(TestProtocolSettings.Default, snapshotCache, txVrfContext, conflicts).Should().Be(VerifyResult.Succeed);
+            tx.VerifyStateDependent(TestProtocolSettings.Default, snapshotCache, txVrfContext, TestBlockchain.TheNeoSystem.NativeContractRepository, conflicts).Should().Be(VerifyResult.Succeed);
 
             // The resulting witness verification cost for 3/4 multisig is 8389470  * 10e-8GAS. Cost depends on M/N.
             // The resulting witness Invocation script (198 bytes for 3 signatures):
@@ -901,10 +901,10 @@ namespace Neo.UnitTests.SmartContract.Native
                 script.Emit(OpCode.PACK);
                 script.EmitPush(CallFlags.All);
                 script.EmitPush("verifyWithECDsa");
-                script.EmitPush(NativeContract.CryptoLib.Hash);
+                script.EmitPush(TestBlockchain.TheNeoSystem.NativeContractRepository.CryptoLib.Hash);
                 script.EmitSysCall(ApplicationEngine.System_Contract_Call);
 
-                using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, settings: TestBlockchain.TheNeoSystem.Settings);
+                using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings);
                 engine.LoadScript(script.ToArray());
                 Assert.AreEqual(VMState.HALT, engine.Execute());
                 return engine.ResultStack.Pop().GetBoolean();

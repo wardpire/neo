@@ -206,7 +206,7 @@ namespace Neo.Network.P2P
         {
             var capabilities = new List<NodeCapability>
             {
-                new FullNodeCapability(NativeContract.Ledger.CurrentIndex(system.StoreView))
+                new FullNodeCapability(system.NativeContractRepository.Ledger.CurrentIndex(system.StoreView))
             };
 
             if (localNode.ListenerTcpPort > 0) capabilities.Add(new ServerCapability(NodeCapabilityType.TcpServer, (ushort)localNode.ListenerTcpPort));

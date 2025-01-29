@@ -79,11 +79,11 @@ namespace Neo.UnitTests.Network.P2P.Payloads
         {
             var test = new NotValidBefore();
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
-            test.Height = NativeContract.Ledger.CurrentIndex(snapshotCache) + 1;
+            test.Height = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CurrentIndex(snapshotCache) + 1;
 
-            Assert.IsFalse(test.Verify(snapshotCache, new Transaction()));
+            Assert.IsFalse(test.Verify(snapshotCache, new Transaction(), TestBlockchain.TheNeoSystem.NativeContractRepository));
             test.Height--;
-            Assert.IsTrue(test.Verify(snapshotCache, new Transaction()));
+            Assert.IsTrue(test.Verify(snapshotCache, new Transaction(), TestBlockchain.TheNeoSystem.NativeContractRepository));
         }
     }
 }

@@ -39,13 +39,13 @@ namespace Neo.UnitTests.SmartContract.Native
         }
 
         [TestMethod]
-        public void Check_Name() => NativeContract.GAS.Name.Should().Be(nameof(GasToken));
+        public void Check_Name() => TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Name.Should().Be(nameof(GasToken));
 
         [TestMethod]
-        public void Check_Symbol() => NativeContract.GAS.Symbol(_snapshotCache).Should().Be("GAS");
+        public void Check_Symbol() => TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Symbol(_snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().Be("GAS");
 
         [TestMethod]
-        public void Check_Decimals() => NativeContract.GAS.Decimals(_snapshotCache).Should().Be(8);
+        public void Check_Decimals() => TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Decimals(_snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository).Should().Be(8);
 
         [TestMethod]
         public async Task Check_BalanceOfTransferAndBurn()
@@ -54,10 +54,10 @@ namespace Neo.UnitTests.SmartContract.Native
             var persistingBlock = new Block { Header = new Header { Index = 1000 } };
             byte[] from = Contract.GetBFTAddress(TestProtocolSettings.Default.StandbyValidators).ToArray();
             byte[] to = new byte[20];
-            var supply = NativeContract.GAS.TotalSupply(snapshot);
+            var supply = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.TotalSupply(snapshot);
             supply.Should().Be(5200000050000000); // 3000000000000000 + 50000000 (neo holder reward)
 
-            var storageKey = new KeyBuilder(NativeContract.Ledger.Id, 12);
+            var storageKey = new KeyBuilder(TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.Id, 12);
             snapshot.Add(storageKey, new StorageItem(new HashIndexState { Hash = UInt256.Zero, Index = persistingBlock.Index - 1 }));
             var keyCount = snapshot.GetChangeSet().Count();
             // Check unclaim
@@ -68,14 +68,14 @@ namespace Neo.UnitTests.SmartContract.Native
 
             // Transfer
 
-            NativeContract.NEO.Transfer(snapshot, from, to, BigInteger.Zero, true, persistingBlock).Should().BeTrue();
-            Assert.ThrowsException<ArgumentNullException>(() => NativeContract.NEO.Transfer(snapshot, from, null, BigInteger.Zero, true, persistingBlock));
-            Assert.ThrowsException<ArgumentNullException>(() => NativeContract.NEO.Transfer(snapshot, null, to, BigInteger.Zero, false, persistingBlock));
-            NativeContract.NEO.BalanceOf(snapshot, from).Should().Be(100000000);
-            NativeContract.NEO.BalanceOf(snapshot, to).Should().Be(0);
+            TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Transfer(snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, from, to, BigInteger.Zero, true, persistingBlock).Should().BeTrue();
+            Assert.ThrowsException<ArgumentNullException>(() => TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Transfer(snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, from, null, BigInteger.Zero, true, persistingBlock));
+            Assert.ThrowsException<ArgumentNullException>(() => TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Transfer(snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, null, to, BigInteger.Zero, false, persistingBlock));
+            TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.BalanceOf(snapshot, from).Should().Be(100000000);
+            TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.BalanceOf(snapshot, to).Should().Be(0);
 
-            NativeContract.GAS.BalanceOf(snapshot, from).Should().Be(52000500_00000000);
-            NativeContract.GAS.BalanceOf(snapshot, to).Should().Be(0);
+            TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.BalanceOf(snapshot, from).Should().Be(52000500_00000000);
+            TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.BalanceOf(snapshot, to).Should().Be(0);
 
             // Check unclaim
 
@@ -83,7 +83,7 @@ namespace Neo.UnitTests.SmartContract.Native
             unclaim.Value.Should().Be(new BigInteger(0));
             unclaim.State.Should().BeTrue();
 
-            supply = NativeContract.GAS.TotalSupply(snapshot);
+            supply = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.TotalSupply(snapshot);
             supply.Should().Be(5200050050000000);
 
             snapshot.GetChangeSet().Count().Should().Be(keyCount + 3); // Gas
@@ -92,48 +92,48 @@ namespace Neo.UnitTests.SmartContract.Native
 
             keyCount = snapshot.GetChangeSet().Count();
 
-            NativeContract.GAS.Transfer(snapshot, from, to, 52000500_00000000, false, persistingBlock).Should().BeFalse(); // Not signed
-            NativeContract.GAS.Transfer(snapshot, from, to, 52000500_00000001, true, persistingBlock).Should().BeFalse(); // More than balance
-            NativeContract.GAS.Transfer(snapshot, from, to, 52000500_00000000, true, persistingBlock).Should().BeTrue(); // All balance
+            TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Transfer(snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, from, to, 52000500_00000000, false, persistingBlock).Should().BeFalse(); // Not signed
+            TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Transfer(snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, from, to, 52000500_00000001, true, persistingBlock).Should().BeFalse(); // More than balance
+            TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Transfer(snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, from, to, 52000500_00000000, true, persistingBlock).Should().BeTrue(); // All balance
 
             // Balance of
 
-            NativeContract.GAS.BalanceOf(snapshot, to).Should().Be(52000500_00000000);
-            NativeContract.GAS.BalanceOf(snapshot, from).Should().Be(0);
+            TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.BalanceOf(snapshot, to).Should().Be(52000500_00000000);
+            TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.BalanceOf(snapshot, from).Should().Be(0);
 
             snapshot.GetChangeSet().Count().Should().Be(keyCount + 1); // All
 
             // Burn
 
-            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, persistingBlock, settings: TestBlockchain.TheNeoSystem.Settings, gas: 0);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, persistingBlock, settings: TestBlockchain.TheNeoSystem.Settings, gas: 0);
             engine.LoadScript(Array.Empty<byte>());
 
             await Assert.ThrowsExceptionAsync<ArgumentOutOfRangeException>(async () =>
-                await NativeContract.GAS.Burn(engine, new UInt160(to), BigInteger.MinusOne));
+                await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(engine, new UInt160(to), BigInteger.MinusOne));
 
             // Burn more than expected
 
             await Assert.ThrowsExceptionAsync<InvalidOperationException>(async () =>
-                await NativeContract.GAS.Burn(engine, new UInt160(to), new BigInteger(52000500_00000001)));
+                await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(engine, new UInt160(to), new BigInteger(52000500_00000001)));
 
             // Real burn
 
-            await NativeContract.GAS.Burn(engine, new UInt160(to), new BigInteger(1));
+            await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(engine, new UInt160(to), new BigInteger(1));
 
-            NativeContract.GAS.BalanceOf(engine.SnapshotCache, to).Should().Be(5200049999999999);
+            TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.BalanceOf(engine.SnapshotCache, to).Should().Be(5200049999999999);
 
             engine.SnapshotCache.GetChangeSet().Count().Should().Be(2);
 
             // Burn all
-            await NativeContract.GAS.Burn(engine, new UInt160(to), new BigInteger(5200049999999999));
+            await TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Burn(engine, new UInt160(to), new BigInteger(5200049999999999));
 
             (keyCount - 2).Should().Be(engine.SnapshotCache.GetChangeSet().Count());
 
             // Bad inputs
 
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => NativeContract.GAS.Transfer(engine.SnapshotCache, from, to, BigInteger.MinusOne, true, persistingBlock));
-            Assert.ThrowsException<FormatException>(() => NativeContract.GAS.Transfer(engine.SnapshotCache, new byte[19], to, BigInteger.One, false, persistingBlock));
-            Assert.ThrowsException<FormatException>(() => NativeContract.GAS.Transfer(engine.SnapshotCache, from, new byte[19], BigInteger.One, false, persistingBlock));
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Transfer(engine.SnapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, from, to, BigInteger.MinusOne, true, persistingBlock));
+            Assert.ThrowsException<FormatException>(() => TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Transfer(engine.SnapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, new byte[19], to, BigInteger.One, false, persistingBlock));
+            Assert.ThrowsException<FormatException>(() => TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Transfer(engine.SnapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, from, new byte[19], BigInteger.One, false, persistingBlock));
         }
 
         internal static StorageKey CreateStorageKey(byte prefix, uint key)
@@ -148,7 +148,7 @@ namespace Neo.UnitTests.SmartContract.Native
             key?.CopyTo(buffer.AsSpan(1));
             return new()
             {
-                Id = NativeContract.GAS.Id,
+                Id = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Id,
                 Key = buffer
             };
         }

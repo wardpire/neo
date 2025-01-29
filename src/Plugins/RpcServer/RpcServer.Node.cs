@@ -132,8 +132,8 @@ namespace Neo.Plugins.RpcServer
         {
             JObject json = new();
             json["tcpport"] = localNode.ListenerTcpPort;
-            json["nonce"] = LocalNode.Nonce;
-            json["useragent"] = LocalNode.UserAgent;
+            json["nonce"] = localNode.Nonce;
+            json["useragent"] = localNode.UserAgent;
             // rpc settings
             JObject rpc = new();
             rpc["maxiteratorresultitems"] = settings.MaxIteratorResultItems;

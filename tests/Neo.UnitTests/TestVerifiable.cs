@@ -12,6 +12,7 @@
 using Neo.IO;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
+using Neo.SmartContract.Native;
 using System;
 using System.IO;
 
@@ -39,7 +40,7 @@ namespace Neo.UnitTests
             throw new NotImplementedException();
         }
 
-        public UInt160[] GetScriptHashesForVerifying(DataCache snapshot)
+        public UInt160[] GetScriptHashesForVerifying(DataCache snapshot, NativeContractRepository nativeContractRepository)
         {
             throw new NotImplementedException();
         }

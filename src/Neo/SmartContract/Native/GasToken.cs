@@ -22,7 +22,7 @@ namespace Neo.SmartContract.Native
         public override string Symbol => "GAS";
         public override byte Decimals => 8;
 
-        internal GasToken()
+        internal GasToken(NativeContractRepository nativeContractRepository) : base(nativeContractRepository)
         {
         }
 
@@ -44,7 +44,7 @@ namespace Neo.SmartContract.Native
                 await Burn(engine, tx.Sender, tx.SystemFee + tx.NetworkFee);
                 totalNetworkFee += tx.NetworkFee;
             }
-            ECPoint[] validators = NEO.GetNextBlockValidators(engine.SnapshotCache, engine.ProtocolSettings.ValidatorsCount);
+            ECPoint[] validators = engine.NativeContractRepository.NEO.GetNextBlockValidators(engine.SnapshotCache, engine.ProtocolSettings.ValidatorsCount);
             UInt160 primary = Contract.CreateSignatureRedeemScript(validators[engine.PersistingBlock.PrimaryIndex]).ToScriptHash();
             await Mint(engine, primary, totalNetworkFee, false);
         }

@@ -59,7 +59,7 @@ namespace Neo.Plugins.Trackers.NEP_17
                 {
                     if (notifyEventArgs.EventName != "Transfer" || notifyEventArgs?.State is not Array stateItems || stateItems.Count == 0)
                         continue;
-                    var contract = NativeContract.ContractManagement.GetContract(snapshot, notifyEventArgs.ScriptHash);
+                    var contract = system.NativeContractRepository.ContractManagement.GetContract(snapshot, notifyEventArgs.ScriptHash);
                     if (contract?.Manifest.SupportedStandards.Contains("NEP-17") == true)
                     {
                         try
@@ -116,7 +116,7 @@ namespace Neo.Plugins.Trackers.NEP_17
             var key = new Nep17BalanceKey(balanceChanged.User, balanceChanged.Asset);
             using ScriptBuilder sb = new();
             sb.EmitDynamicCall(balanceChanged.Asset, "balanceOf", balanceChanged.User);
-            using ApplicationEngine engine = ApplicationEngine.Run(sb.ToArray(), snapshot, settings: _neoSystem.Settings, gas: 1700_0000);
+            using ApplicationEngine engine = ApplicationEngine.Run(sb.ToArray(), snapshot, _neoSystem.NativeContractRepository, settings: _neoSystem.Settings, gas: 1700_0000);
 
             if (engine.State.HasFlag(VMState.FAULT) || engine.ResultStack.Count == 0)
             {
@@ -180,7 +180,7 @@ namespace Neo.Plugins.Trackers.NEP_17
             byte[] prefix = Key(Nep17BalancePrefix, userScriptHash);
             foreach (var (key, value) in _db.FindPrefix<Nep17BalanceKey, TokenBalance>(prefix))
             {
-                if (NativeContract.ContractManagement.GetContract(_neoSystem.StoreView, key.AssetScriptHash) is null)
+                if (_neoSystem.NativeContractRepository.ContractManagement.GetContract(_neoSystem.StoreView, key.AssetScriptHash) is null)
                     continue;
 
                 try
@@ -189,10 +189,10 @@ namespace Neo.Plugins.Trackers.NEP_17
                     script.EmitDynamicCall(key.AssetScriptHash, "decimals");
                     script.EmitDynamicCall(key.AssetScriptHash, "symbol");
 
-                    var engine = ApplicationEngine.Run(script.ToArray(), _neoSystem.StoreView, settings: _neoSystem.Settings);
+                    var engine = ApplicationEngine.Run(script.ToArray(), _neoSystem.StoreView, _neoSystem.NativeContractRepository, settings: _neoSystem.Settings);
                     var symbol = engine.ResultStack.Pop().GetString();
                     var decimals = engine.ResultStack.Pop().GetInteger();
-                    var name = NativeContract.ContractManagement.GetContract(_neoSystem.StoreView, key.AssetScriptHash).Manifest.Name;
+                    var name = _neoSystem.NativeContractRepository.ContractManagement.GetContract(_neoSystem.StoreView, key.AssetScriptHash).Manifest.Name;
 
                     balances.Add(new JObject
                     {

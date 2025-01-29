@@ -30,7 +30,7 @@ namespace Neo.UnitTests.Persistence
         public void Setup()
         {
             _memoryStore = new MemoryStore();
-            _neoSystem = new NeoSystem(TestProtocolSettings.Default, new TestMemoryStoreProvider(_memoryStore));
+            _neoSystem = new NeoSystem(TestProtocolSettings.Default, _neoSystem.PluginRepository, new TestMemoryStoreProvider(_memoryStore), _neoSystem.NativeContractRepository);
         }
 
         [TestCleanup]

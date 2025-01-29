@@ -67,6 +67,8 @@ namespace Neo.SmartContract
         internal readonly uint StoragePrice;
         private byte[] nonceData;
 
+        public NativeContractRepository NativeContractRepository { get; init; }
+
         /// <summary>
         /// Gets or sets the provider used to create the <see cref="ApplicationEngine"/>.
         /// </summary>
@@ -179,10 +181,12 @@ namespace Neo.SmartContract
         /// <param name="diagnostic">The diagnostic to be used by the <see cref="ApplicationEngine"/>.</param>
         /// <param name="jumpTable">The jump table to be used by the <see cref="ApplicationEngine"/>.</param>
         protected unsafe ApplicationEngine(
-            TriggerType trigger, IVerifiable container, DataCache snapshotCache, Block persistingBlock,
-            ProtocolSettings settings, long gas, IDiagnostic diagnostic, JumpTable jumpTable = null)
+            TriggerType trigger, IVerifiable container, DataCache snapshotCache, Block? persistingBlock,
+            ProtocolSettings settings, long gas, IDiagnostic diagnostic, NativeContractRepository nativeContractRepository, JumpTable jumpTable = null)
             : base(jumpTable ?? DefaultJumpTable)
         {
+            persistingBlock ??= CreateDummyBlock(snapshotCache, settings ?? ProtocolSettings.Default);
+            this.NativeContractRepository = nativeContractRepository;
             Trigger = trigger;
             ScriptContainer = container;
             originalSnapshotCache = snapshotCache;
@@ -190,8 +194,8 @@ namespace Neo.SmartContract
             ProtocolSettings = settings;
             _feeAmount = gas;
             Diagnostic = diagnostic;
-            ExecFeeFactor = snapshotCache is null || persistingBlock?.Index == 0 ? PolicyContract.DefaultExecFeeFactor : NativeContract.Policy.GetExecFeeFactor(snapshotCache);
-            StoragePrice = snapshotCache is null || persistingBlock?.Index == 0 ? PolicyContract.DefaultStoragePrice : NativeContract.Policy.GetStoragePrice(snapshotCache);
+            ExecFeeFactor = snapshotCache is null || persistingBlock?.Index == 0 ? PolicyContract.DefaultExecFeeFactor : this.NativeContractRepository.Policy.GetExecFeeFactor(snapshotCache);
+            StoragePrice = snapshotCache is null || persistingBlock?.Index == 0 ? PolicyContract.DefaultStoragePrice : this.NativeContractRepository.Policy.GetStoragePrice(snapshotCache);
             nonceData = container is Transaction tx ? tx.Hash.ToArray()[..16] : new byte[16];
             if (persistingBlock is not null)
             {
@@ -280,7 +284,7 @@ namespace Neo.SmartContract
 
         private ExecutionContext CallContractInternal(UInt160 contractHash, string method, CallFlags flags, bool hasReturnValue, StackItem[] args)
         {
-            ContractState contract = NativeContract.ContractManagement.GetContract(SnapshotCache, contractHash);
+            ContractState contract = NativeContractRepository.ContractManagement.GetContract(SnapshotCache, contractHash);
             if (contract is null) throw new InvalidOperationException($"Called Contract Does Not Exist: {contractHash}");
             ContractMethodDescriptor md = contract.Manifest.Abi.GetMethod(method, args.Length);
             if (md is null) throw new InvalidOperationException($"Method \"{method}\" with {args.Length} parameter(s) doesn't exist in the contract {contractHash}.");
@@ -289,7 +293,7 @@ namespace Neo.SmartContract
 
         private ExecutionContext CallContractInternal(ContractState contract, ContractMethodDescriptor method, CallFlags flags, bool hasReturnValue, IReadOnlyList<StackItem> args)
         {
-            if (NativeContract.Policy.IsBlocked(SnapshotCache, contract.Hash))
+            if (NativeContractRepository.Policy.IsBlocked(SnapshotCache, contract.Hash))
                 throw new InvalidOperationException($"The contract {contract.Hash} has been blocked.");
 
             ExecutionContext currentContext = CurrentContext;
@@ -302,7 +306,7 @@ namespace Neo.SmartContract
             {
                 var executingContract = IsHardforkEnabled(Hardfork.HF_Domovoi)
                 ? state.Contract // use executing contract state to avoid possible contract update/destroy side-effects, ref. https://github.com/neo-project/neo/pull/3290.
-                : NativeContract.ContractManagement.GetContract(SnapshotCache, CurrentScriptHash);
+                : NativeContractRepository.ContractManagement.GetContract(SnapshotCache, CurrentScriptHash);
                 if (executingContract?.CanCall(contract, method.Name) == false)
                     throw new InvalidOperationException($"Cannot Call Method {method.Name} Of Contract {contract.Hash} From Contract {CurrentScriptHash}");
             }
@@ -398,13 +402,13 @@ namespace Neo.SmartContract
         /// <param name="gas">The maximum gas used in this execution, in the unit of datoshi. The execution will fail when the gas is exhausted.</param>
         /// <param name="diagnostic">The diagnostic to be used by the <see cref="ApplicationEngine"/>.</param>
         /// <returns>The engine instance created.</returns>
-        public static ApplicationEngine Create(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null)
+        public static ApplicationEngine Create(TriggerType trigger, IVerifiable container, DataCache snapshot, NativeContractRepository nativeContractRepository, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null)
         {
             // Adjust jump table according persistingBlock
             var jumpTable = ApplicationEngine.DefaultJumpTable;
 
-            return Provider?.Create(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, jumpTable)
-                  ?? new ApplicationEngine(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, jumpTable);
+            return Provider?.Create(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, jumpTable, nativeContractRepository)
+                  ?? new ApplicationEngine(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, nativeContractRepository, jumpTable);
         }
 
         public override void LoadContext(ExecutionContext context)
@@ -601,10 +605,10 @@ namespace Neo.SmartContract
             Diagnostic?.PostExecuteInstruction(instruction);
         }
 
-        private static Block CreateDummyBlock(DataCache snapshot, ProtocolSettings settings)
+        private Block CreateDummyBlock(DataCache snapshot, ProtocolSettings settings)
         {
-            UInt256 hash = NativeContract.Ledger.CurrentHash(snapshot);
-            Block currentBlock = NativeContract.Ledger.GetBlock(snapshot, hash);
+            UInt256 hash = NativeContractRepository.Ledger.CurrentHash(snapshot);
+            Block currentBlock = NativeContractRepository.Ledger.GetBlock(snapshot, hash);
             return new Block
             {
                 Header = new Header
@@ -664,10 +668,9 @@ namespace Neo.SmartContract
         /// <param name="gas">The maximum gas, in the unit of datoshi, used in this execution. The execution will fail when the gas is exhausted.</param>
         /// <param name="diagnostic">The diagnostic to be used by the <see cref="ApplicationEngine"/>.</param>
         /// <returns>The engine instance created.</returns>
-        public static ApplicationEngine Run(ReadOnlyMemory<byte> script, DataCache snapshot, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = TestModeGas, IDiagnostic diagnostic = null)
+        public static ApplicationEngine Run(ReadOnlyMemory<byte> script, DataCache snapshot, NativeContractRepository nativeContractRepository, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = TestModeGas, IDiagnostic diagnostic = null)
         {
-            persistingBlock ??= CreateDummyBlock(snapshot, settings ?? ProtocolSettings.Default);
-            ApplicationEngine engine = Create(TriggerType.Application, container, snapshot, persistingBlock, settings, gas, diagnostic);
+            ApplicationEngine engine = Create(TriggerType.Application, container, snapshot, nativeContractRepository, persistingBlock, settings, gas, diagnostic);
             engine.LoadScript(script, initialPosition: offset);
             engine.Execute();
             return engine;

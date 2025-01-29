@@ -38,12 +38,12 @@ namespace Neo.Plugins.RpcServer.Tests
         public void TestGetPeers()
         {
             var settings = TestProtocolSettings.SoleNode;
-            var neoSystem = new NeoSystem(settings, _memoryStoreProvider);
+            var neoSystem = new NeoSystem(settings, TestBlockchain.TheNeoSystem.PluginRepository, _memoryStoreProvider, TestBlockchain.TheNeoSystem.NativeContractRepository);
             var localNode = neoSystem.LocalNode.Ask<LocalNode>(new LocalNode.GetInstance()).Result;
             localNode.AddPeers(new List<IPEndPoint>() { new IPEndPoint(new IPAddress(new byte[] { 127, 0, 0, 1 }), 11332) });
             localNode.AddPeers(new List<IPEndPoint>() { new IPEndPoint(new IPAddress(new byte[] { 127, 0, 0, 1 }), 12332) });
             localNode.AddPeers(new List<IPEndPoint>() { new IPEndPoint(new IPAddress(new byte[] { 127, 0, 0, 1 }), 13332) });
-            var rpcServer = new RpcServer(neoSystem, RpcServerSettings.Default);
+            var rpcServer = new RpcServer(neoSystem, RpcServerSettings.GetDefault(TestBlockchain.TheNeoSystem.NativeContractRepository));
 
             var result = rpcServer.GetPeers();
             Assert.IsInstanceOfType(result, typeof(JObject));
@@ -188,7 +188,7 @@ namespace Neo.Plugins.RpcServer.Tests
             var snapshot = _neoSystem.GetSnapshotCache();
             var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
             var txString = Convert.ToBase64String(tx.ToArray());
-            NativeContract.Policy.BlockAccount(snapshot, _walletAccount.ScriptHash);
+            TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.BlockAccount(snapshot, _walletAccount.ScriptHash);
             snapshot.Commit();
 
             var exception = Assert.ThrowsException<RpcException>(() =>

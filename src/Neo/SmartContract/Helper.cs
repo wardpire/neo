@@ -291,7 +291,7 @@ namespace Neo.SmartContract
         /// <param name="snapshot">The snapshot used to read data.</param>
         /// <param name="datoshi">The maximum GAS that can be used, in the unit of datoshi, 1 datoshi = 1e-8 GAS.</param>
         /// <returns><see langword="true"/> if the <see cref="IVerifiable"/> is verified as valid; otherwise, <see langword="false"/>.</returns>
-        public static bool VerifyWitnesses(this IVerifiable verifiable, ProtocolSettings settings, DataCache snapshot, long datoshi)
+        public static bool VerifyWitnesses(this IVerifiable verifiable, ProtocolSettings settings,NativeContractRepository nativeContractRepository, DataCache snapshot, long datoshi)
         {
             if (datoshi < 0) return false;
             if (datoshi > MaxVerificationGas) datoshi = MaxVerificationGas;
@@ -299,7 +299,7 @@ namespace Neo.SmartContract
             UInt160[] hashes;
             try
             {
-                hashes = verifiable.GetScriptHashesForVerifying(snapshot);
+                hashes = verifiable.GetScriptHashesForVerifying(snapshot, nativeContractRepository);
             }
             catch (InvalidOperationException)
             {
@@ -308,14 +308,14 @@ namespace Neo.SmartContract
             if (hashes.Length != verifiable.Witnesses.Length) return false;
             for (int i = 0; i < hashes.Length; i++)
             {
-                if (!verifiable.VerifyWitness(settings, snapshot, hashes[i], verifiable.Witnesses[i], datoshi, out long fee))
+                if (!verifiable.VerifyWitness(settings,nativeContractRepository, snapshot, hashes[i], verifiable.Witnesses[i], datoshi, out long fee))
                     return false;
                 datoshi -= fee;
             }
             return true;
         }
 
-        internal static bool VerifyWitness(this IVerifiable verifiable, ProtocolSettings settings, DataCache snapshot, UInt160 hash, Witness witness, long datoshi, out long fee)
+        internal static bool VerifyWitness(this IVerifiable verifiable, ProtocolSettings settings, NativeContractRepository nativeContractRepository, DataCache snapshot, UInt160 hash, Witness witness, long datoshi, out long fee)
         {
             fee = 0;
             Script invocationScript;
@@ -327,11 +327,11 @@ namespace Neo.SmartContract
             {
                 return false;
             }
-            using (ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Verification, verifiable, snapshot?.CloneCache(), null, settings, datoshi))
+            using (ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Verification, verifiable, snapshot?.CloneCache(), nativeContractRepository, null, settings, datoshi))
             {
                 if (witness.VerificationScript.Length == 0)
                 {
-                    ContractState cs = NativeContract.ContractManagement.GetContract(snapshot, hash);
+                    ContractState cs = nativeContractRepository.ContractManagement.GetContract(snapshot, hash);
                     if (cs is null) return false;
                     ContractMethodDescriptor md = cs.Manifest.Abi.GetMethod(ContractBasicMethod.Verify, ContractBasicMethod.VerifyPCount);
                     if (md?.ReturnType != ContractParameterType.Boolean) return false;
@@ -339,7 +339,7 @@ namespace Neo.SmartContract
                 }
                 else
                 {
-                    if (NativeContract.IsNative(hash)) return false;
+                    if (nativeContractRepository.IsNative(hash)) return false;
                     if (hash != witness.ScriptHash) return false;
                     Script verificationScript;
                     try

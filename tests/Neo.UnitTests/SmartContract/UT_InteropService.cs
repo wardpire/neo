@@ -57,7 +57,7 @@ namespace Neo.UnitTests.SmartContract
 
                 scriptHash2 = script.ToArray().ToScriptHash();
 
-                snapshotCache.DeleteContract(scriptHash2);
+                snapshotCache.DeleteContract(scriptHash2, TestBlockchain.TheNeoSystem.NativeContractRepository);
                 var contract = TestUtils.GetContract(script.ToArray(), TestUtils.CreateManifest("test", ContractParameterType.Any, ContractParameterType.Integer, ContractParameterType.Integer));
                 contract.Manifest.Abi.Events = new[]
                 {
@@ -81,12 +81,12 @@ namespace Neo.UnitTests.SmartContract
                         Methods = WildcardContainer<string>.Create(new string[]{"test"})
                     }
                 };
-                snapshotCache.AddContract(scriptHash2, contract);
+                snapshotCache.AddContract(scriptHash2, contract, TestBlockchain.TheNeoSystem.NativeContractRepository);
             }
 
             // Wrong length
 
-            using (var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, null, ProtocolSettings.Default))
+            using (var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, null, ProtocolSettings.Default))
             using (var script = new ScriptBuilder())
             {
                 // Retrive
@@ -103,7 +103,7 @@ namespace Neo.UnitTests.SmartContract
 
             // All test
 
-            using (var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, null, ProtocolSettings.Default))
+            using (var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, null, ProtocolSettings.Default))
             using (var script = new ScriptBuilder())
             {
                 // Notification
@@ -180,7 +180,7 @@ namespace Neo.UnitTests.SmartContract
 
             // Script notifications
 
-            using (var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, null, ProtocolSettings.Default))
+            using (var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, null, ProtocolSettings.Default))
             using (var script = new ScriptBuilder())
             {
                 // Notification
@@ -256,7 +256,7 @@ namespace Neo.UnitTests.SmartContract
 
             // Clean storage
 
-            snapshotCache.DeleteContract(scriptHash2);
+            snapshotCache.DeleteContract(scriptHash2,TestBlockchain.TheNeoSystem.NativeContractRepository);
         }
 
         private static void AssertNotification(StackItem stackItem, UInt160 scriptHash, string notification)
@@ -292,7 +292,7 @@ namespace Neo.UnitTests.SmartContract
 
             var contract = TestUtils.GetContract(scriptA.ToArray(), TestUtils.CreateManifest("test", ContractParameterType.Any, ContractParameterType.String, ContractParameterType.Integer));
             engine = GetEngine(true, true, addScript: false);
-            engine.SnapshotCache.AddContract(contract.Hash, contract);
+            engine.SnapshotCache.AddContract(contract.Hash, contract, TestBlockchain.TheNeoSystem.NativeContractRepository);
 
             using ScriptBuilder scriptB = new();
             scriptB.EmitDynamicCall(contract.Hash, "test", "0", 1);
@@ -440,7 +440,7 @@ namespace Neo.UnitTests.SmartContract
         public void TestBlockchain_GetHeight()
         {
             var engine = GetEngine(true, true);
-            NativeContract.Ledger.CurrentIndex(engine.SnapshotCache).Should().Be(0);
+            TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CurrentIndex(engine.SnapshotCache).Should().Be(0);
         }
 
         [TestMethod]
@@ -448,14 +448,14 @@ namespace Neo.UnitTests.SmartContract
         {
             var engine = GetEngine(true, true);
 
-            NativeContract.Ledger.GetBlock(engine.SnapshotCache, UInt256.Zero).Should().BeNull();
+            TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.GetBlock(engine.SnapshotCache, UInt256.Zero).Should().BeNull();
 
             var data1 = new byte[] { 0x01, 0x01, 0x01 ,0x01, 0x01, 0x01, 0x01, 0x01,
                                         0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
                                         0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
                                         0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01};
-            NativeContract.Ledger.GetBlock(engine.SnapshotCache, new UInt256(data1)).Should().BeNull();
-            NativeContract.Ledger.GetBlock(engine.SnapshotCache, TestBlockchain.TheNeoSystem.GenesisBlock.Hash).Should().NotBeNull();
+            TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.GetBlock(engine.SnapshotCache, new UInt256(data1)).Should().BeNull();
+            TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.GetBlock(engine.SnapshotCache, TestBlockchain.TheNeoSystem.GenesisBlock.Hash).Should().NotBeNull();
         }
 
         [TestMethod]
@@ -466,7 +466,7 @@ namespace Neo.UnitTests.SmartContract
                                         0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
                                         0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
                                         0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01};
-            NativeContract.Ledger.GetTransaction(engine.SnapshotCache, new UInt256(data1)).Should().BeNull();
+            TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.GetTransaction(engine.SnapshotCache, new UInt256(data1)).Should().BeNull();
         }
 
         [TestMethod]
@@ -481,7 +481,7 @@ namespace Neo.UnitTests.SmartContract
             TestUtils.TransactionAdd(engine.SnapshotCache, state);
 
             using var script = new ScriptBuilder();
-            script.EmitDynamicCall(NativeContract.Ledger.Hash, "getTransactionHeight", state.Transaction.Hash);
+            script.EmitDynamicCall(TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.Hash, "getTransactionHeight", state.Transaction.Hash);
             engine.LoadScript(script.ToArray());
             engine.Execute();
             Assert.AreEqual(engine.State, VMState.HALT);
@@ -499,21 +499,21 @@ namespace Neo.UnitTests.SmartContract
                                         0x01, 0x01, 0x01, 0x01, 0x01,
                                         0x01, 0x01, 0x01, 0x01, 0x01,
                                         0x01, 0x01, 0x01, 0x01, 0x01 };
-            NativeContract.ContractManagement.GetContract(engine.SnapshotCache, new UInt160(data1)).Should().BeNull();
+            TestBlockchain.TheNeoSystem.NativeContractRepository.ContractManagement.GetContract(engine.SnapshotCache, new UInt160(data1)).Should().BeNull();
 
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             var state = TestUtils.GetContract();
-            snapshotCache.AddContract(state.Hash, state);
-            engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache);
+            snapshotCache.AddContract(state.Hash, state,TestBlockchain.TheNeoSystem.NativeContractRepository);
+            engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository);
             engine.LoadScript(new byte[] { 0x01 });
-            NativeContract.ContractManagement.GetContract(engine.SnapshotCache, state.Hash).Hash.Should().Be(state.Hash);
+            TestBlockchain.TheNeoSystem.NativeContractRepository.ContractManagement.GetContract(engine.SnapshotCache, state.Hash).Hash.Should().Be(state.Hash);
         }
 
         [TestMethod]
         public void TestBlockchain_GetContractById()
         {
             var engine = GetEngine(true, true);
-            var contract = NativeContract.ContractManagement.GetContractById(engine.SnapshotCache, -1);
+            var contract = TestBlockchain.TheNeoSystem.NativeContractRepository.ContractManagement.GetContractById(engine.SnapshotCache, -1);
             contract.Id.Should().Be(-1);
             contract.Manifest.Name.Should().Be(nameof(ContractManagement));
         }
@@ -522,25 +522,25 @@ namespace Neo.UnitTests.SmartContract
         public void TestBlockchain_HasMethod()
         {
             var engine = GetEngine(true, true);
-            NativeContract.ContractManagement.HasMethod(engine.SnapshotCache, NativeContract.NEO.Hash, "symbol", 0).Should().Be(true);
-            NativeContract.ContractManagement.HasMethod(engine.SnapshotCache, NativeContract.NEO.Hash, "transfer", 4).Should().Be(true);
+            TestBlockchain.TheNeoSystem.NativeContractRepository.ContractManagement.HasMethod(engine.SnapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Hash, "symbol", 0).Should().Be(true);
+            TestBlockchain.TheNeoSystem.NativeContractRepository.ContractManagement.HasMethod(engine.SnapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Hash, "transfer", 4).Should().Be(true);
         }
 
         [TestMethod]
         public void TestBlockchain_ListContracts()
         {
             var engine = GetEngine(true, true);
-            var list = NativeContract.ContractManagement.ListContracts(engine.SnapshotCache);
+            var list = TestBlockchain.TheNeoSystem.NativeContractRepository.ContractManagement.ListContracts(engine.SnapshotCache);
             list.ForEach(p => p.Id.Should().BeLessThan(0));
 
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             var state = TestUtils.GetContract();
-            snapshotCache.AddContract(state.Hash, state);
-            engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache);
+            snapshotCache.AddContract(state.Hash, state,TestBlockchain.TheNeoSystem.NativeContractRepository);
+            engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache,TestBlockchain.TheNeoSystem.NativeContractRepository);
             engine.LoadScript(new byte[] { 0x01 });
-            NativeContract.ContractManagement.GetContract(engine.SnapshotCache, state.Hash).Hash.Should().Be(state.Hash);
+            TestBlockchain.TheNeoSystem.NativeContractRepository.ContractManagement.GetContract(engine.SnapshotCache, state.Hash).Hash.Should().Be(state.Hash);
 
-            var list2 = NativeContract.ContractManagement.ListContracts(engine.SnapshotCache);
+            var list2 = TestBlockchain.TheNeoSystem.NativeContractRepository.ContractManagement.ListContracts(engine.SnapshotCache);
             list2.Count().Should().Be(list.Count() + 1);
         }
 
@@ -549,7 +549,7 @@ namespace Neo.UnitTests.SmartContract
         {
             var engine = GetEngine(false, true);
             var state = TestUtils.GetContract();
-            engine.SnapshotCache.AddContract(state.Hash, state);
+            engine.SnapshotCache.AddContract(state.Hash, state, TestBlockchain.TheNeoSystem.NativeContractRepository);
             engine.LoadScript(state.Script);
             engine.GetStorageContext().IsReadOnly.Should().BeFalse();
         }
@@ -559,7 +559,7 @@ namespace Neo.UnitTests.SmartContract
         {
             var engine = GetEngine(false, true);
             var state = TestUtils.GetContract();
-            engine.SnapshotCache.AddContract(state.Hash, state);
+            engine.SnapshotCache.AddContract(state.Hash, state, TestBlockchain.TheNeoSystem.NativeContractRepository);
             engine.LoadScript(state.Script);
             engine.GetReadOnlyContext().IsReadOnly.Should().BeTrue();
         }
@@ -580,9 +580,9 @@ namespace Neo.UnitTests.SmartContract
             {
                 Value = new byte[] { 0x01, 0x02, 0x03, 0x04 }
             };
-            snapshotCache.AddContract(state.Hash, state);
+            snapshotCache.AddContract(state.Hash, state,TestBlockchain.TheNeoSystem.NativeContractRepository);
             snapshotCache.Add(storageKey, storageItem);
-            var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache);
+            var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache,TestBlockchain.TheNeoSystem.NativeContractRepository);
             engine.LoadScript(new byte[] { 0x01 });
 
             engine.Get(new StorageContext
@@ -636,9 +636,9 @@ namespace Neo.UnitTests.SmartContract
             {
                 Value = new byte[] { 0x01, 0x02, 0x03, 0x04 }
             };
-            snapshotCache.AddContract(state.Hash, state);
+            snapshotCache.AddContract(state.Hash, state,TestBlockchain.TheNeoSystem.NativeContractRepository);
             snapshotCache.Add(storageKey, storageItem);
-            engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache);
+            engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache,TestBlockchain.TheNeoSystem.NativeContractRepository);
             engine.LoadScript(new byte[] { 0x01 });
             key = new byte[] { 0x01 };
             value = new byte[] { 0x02 };
@@ -666,9 +666,9 @@ namespace Neo.UnitTests.SmartContract
             {
                 Value = new byte[] { 0x01, 0x02, 0x03, 0x04 }
             };
-            snapshotCache.AddContract(state.Hash, state);
+            snapshotCache.AddContract(state.Hash, state,TestBlockchain.TheNeoSystem.NativeContractRepository);
             snapshotCache.Add(storageKey, storageItem);
-            engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache);
+            engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache,TestBlockchain.TheNeoSystem.NativeContractRepository);
             engine.LoadScript(new byte[] { 0x01 });
             var key = new byte[] { 0x01 };
             var storageContext = new StorageContext
@@ -703,26 +703,26 @@ namespace Neo.UnitTests.SmartContract
             var args = new VM.Types.Array { 0, 1 };
             var state = TestUtils.GetContract(method, args.Count);
 
-            var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, null, ProtocolSettings.Default);
+            var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache,TestBlockchain.TheNeoSystem.NativeContractRepository, null, ProtocolSettings.Default);
             engine.LoadScript(new byte[] { 0x01 });
-            engine.SnapshotCache.AddContract(state.Hash, state);
+            engine.SnapshotCache.AddContract(state.Hash, state, TestBlockchain.TheNeoSystem.NativeContractRepository);
 
             engine.CallContract(state.Hash, method, CallFlags.All, args);
             engine.CurrentContext.EvaluationStack.Pop().Should().Be(args[0]);
             engine.CurrentContext.EvaluationStack.Pop().Should().Be(args[1]);
 
             state.Manifest.Permissions[0].Methods = WildcardContainer<string>.Create("a");
-            engine.SnapshotCache.DeleteContract(state.Hash);
-            engine.SnapshotCache.AddContract(state.Hash, state);
+            engine.SnapshotCache.DeleteContract(state.Hash, TestBlockchain.TheNeoSystem.NativeContractRepository);
+            engine.SnapshotCache.AddContract(state.Hash, state, TestBlockchain.TheNeoSystem.NativeContractRepository);
             Assert.ThrowsException<InvalidOperationException>(() => engine.CallContract(state.Hash, method, CallFlags.All, args));
 
             state.Manifest.Permissions[0].Methods = WildcardContainer<string>.CreateWildcard();
-            engine.SnapshotCache.DeleteContract(state.Hash);
-            engine.SnapshotCache.AddContract(state.Hash, state);
+            engine.SnapshotCache.DeleteContract(state.Hash, TestBlockchain.TheNeoSystem.NativeContractRepository);
+            engine.SnapshotCache.AddContract(state.Hash, state, TestBlockchain.TheNeoSystem.NativeContractRepository);
             engine.CallContract(state.Hash, method, CallFlags.All, args);
 
-            engine.SnapshotCache.DeleteContract(state.Hash);
-            engine.SnapshotCache.AddContract(state.Hash, state);
+            engine.SnapshotCache.DeleteContract(state.Hash, TestBlockchain.TheNeoSystem.NativeContractRepository);
+            engine.SnapshotCache.AddContract(state.Hash, state, TestBlockchain.TheNeoSystem.NativeContractRepository);
             Assert.ThrowsException<InvalidOperationException>(() => engine.CallContract(UInt160.Zero, method, CallFlags.All, args));
         }
 
@@ -742,15 +742,15 @@ namespace Neo.UnitTests.SmartContract
                 Id = 0x43000000,
                 Key = new byte[] { 0x01 }
             };
-            snapshotCache.AddContract(scriptHash, state);
+            snapshotCache.AddContract(scriptHash, state,TestBlockchain.TheNeoSystem.NativeContractRepository);
             snapshotCache.Add(storageKey, storageItem);
-            snapshotCache.DestroyContract(scriptHash);
+            snapshotCache.DestroyContract(scriptHash, TestBlockchain.TheNeoSystem.NativeContractRepository);
             snapshotCache.Find(BitConverter.GetBytes(0x43000000)).Any().Should().BeFalse();
 
             //storages are removed
             state = TestUtils.GetContract();
-            snapshotCache.AddContract(scriptHash, state);
-            snapshotCache.DestroyContract(scriptHash);
+            snapshotCache.AddContract(scriptHash, state,TestBlockchain.TheNeoSystem.NativeContractRepository);
+            snapshotCache.DestroyContract(scriptHash, TestBlockchain.TheNeoSystem.NativeContractRepository);
             snapshotCache.Find(BitConverter.GetBytes(0x43000000)).Any().Should().BeFalse();
         }
 
@@ -772,7 +772,7 @@ namespace Neo.UnitTests.SmartContract
             var tx = hasContainer ? TestUtils.GetTransaction(UInt160.Zero) : null;
             var snapshotCache = hasSnapshot ? TestBlockchain.GetTestSnapshotCache() : null;
             var block = hasBlock ? new Block { Header = new Header() } : null;
-            var engine = ApplicationEngine.Create(TriggerType.Application, tx, snapshotCache, block, TestBlockchain.TheNeoSystem.Settings, gas: gas);
+            var engine = ApplicationEngine.Create(TriggerType.Application, tx, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, block, TestBlockchain.TheNeoSystem.Settings, gas: gas);
             if (addScript) engine.LoadScript(new byte[] { 0x01 });
             return engine;
         }
@@ -829,20 +829,20 @@ namespace Neo.UnitTests.SmartContract
         public void TestGetBlockHash()
         {
             var snapshotCache = GetEngine(true, true).SnapshotCache;
-            var hash = LedgerContract.Ledger.GetBlockHash(snapshotCache, 0);
-            var hash2 = LedgerContract.Ledger.GetBlock(snapshotCache, 0).Hash;
-            var hash3 = LedgerContract.Ledger.GetHeader(snapshotCache, 0).Hash;
+            var hash = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.GetBlockHash(snapshotCache, 0);
+            var hash2 = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.GetBlock(snapshotCache, 0).Hash;
+            var hash3 = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.GetHeader(snapshotCache, 0).Hash;
             hash.ToString().Should().Be(hash2.ToString());
             hash.ToString().Should().Be(hash3.ToString());
             hash.ToString().Should().Be("0x1f4d1defa46faa5e7b9b8d3f79a06bec777d7c26c4aa5f6f5899a291daa87c15");
-            LedgerContract.Ledger.ContainsBlock(snapshotCache, hash).Should().BeTrue();
+            TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.ContainsBlock(snapshotCache, hash).Should().BeTrue();
         }
 
         [TestMethod]
         public void TestGetCandidateVote()
         {
             var snapshotCache = GetEngine(true, true).SnapshotCache;
-            var vote = LedgerContract.NEO.GetCandidateVote(snapshotCache, new ECPoint());
+            var vote = TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.GetCandidateVote(snapshotCache, new ECPoint());
             vote.Should().Be(-1);
         }
 
@@ -852,7 +852,7 @@ namespace Neo.UnitTests.SmartContract
             var descriptor1 = ContractPermissionDescriptor.CreateWildcard();
             descriptor1.Equals(null).Should().BeFalse();
             descriptor1.Equals(null as object).Should().BeFalse();
-            var descriptor2 = ContractPermissionDescriptor.Create(LedgerContract.NEO.Hash);
+            var descriptor2 = ContractPermissionDescriptor.Create(TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Hash);
             var descriptor3 = ContractPermissionDescriptor.Create(hash: null);
             descriptor1.Equals(descriptor3).Should().BeTrue();
             descriptor1.Equals(descriptor3 as object).Should().BeTrue();

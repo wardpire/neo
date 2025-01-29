@@ -37,7 +37,7 @@ namespace Neo.Plugins.RpcServer.Tests
         [TestMethod]
         public void TestGetBestBlockHash()
         {
-            var key = NativeContract.Ledger.CreateStorageKey(12);
+            var key = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CreateStorageKey(12);
             var expectedHash = UInt256.Zero;
 
             var snapshot = _neoSystem.GetSnapshotCache();
@@ -64,12 +64,12 @@ namespace Neo.Plugins.RpcServer.Tests
             var block2 = blockArr.AsSerializable<Block>();
             block2.Transactions.ForEach(tx =>
             {
-                Assert.AreEqual(VerifyResult.Succeed, tx.VerifyStateIndependent(UnitTests.TestProtocolSettings.Default));
+                Assert.AreEqual(VerifyResult.Succeed, tx.VerifyStateIndependent(UnitTests.TestProtocolSettings.Default, TestBlockchain.TheNeoSystem.NativeContractRepository));
             });
 
             result = _rpcServer.GetBlock(new BlockHashOrIndex(block.Hash), true);
             var block3 = block.ToJson(UnitTests.TestProtocolSettings.Default);
-            block3["confirmations"] = NativeContract.Ledger.CurrentIndex(snapshot) - block.Index + 1;
+            block3["confirmations"] = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CurrentIndex(snapshot) - block.Index + 1;
             result.ToString().Should().Be(block3.ToString());
         }
 
@@ -86,12 +86,12 @@ namespace Neo.Plugins.RpcServer.Tests
             var block2 = blockArr.AsSerializable<Block>();
             block2.Transactions.ForEach(tx =>
             {
-                Assert.AreEqual(VerifyResult.Succeed, tx.VerifyStateIndependent(UnitTests.TestProtocolSettings.Default));
+                Assert.AreEqual(VerifyResult.Succeed, tx.VerifyStateIndependent(UnitTests.TestProtocolSettings.Default, TestBlockchain.TheNeoSystem.NativeContractRepository));
             });
 
             result = _rpcServer.GetBlock(new BlockHashOrIndex(block.Index), true);
             var block3 = block.ToJson(UnitTests.TestProtocolSettings.Default);
-            block3["confirmations"] = NativeContract.Ledger.CurrentIndex(snapshot) - block.Index + 1;
+            block3["confirmations"] = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CurrentIndex(snapshot) - block.Index + 1;
             result.ToString().Should().Be(block3.ToString());
         }
 
@@ -133,7 +133,7 @@ namespace Neo.Plugins.RpcServer.Tests
             snapshot.Commit();
             var result = _rpcServer.GetBlockHeader(new BlockHashOrIndex(block.Hash), true);
             var header = block.Header.ToJson(_neoSystem.Settings);
-            header["confirmations"] = NativeContract.Ledger.CurrentIndex(snapshot) - block.Index + 1;
+            header["confirmations"] = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CurrentIndex(snapshot) - block.Index + 1;
             Assert.AreEqual(header.ToString(), result.ToString());
 
             result = _rpcServer.GetBlockHeader(new BlockHashOrIndex(block.Hash), false);
@@ -147,7 +147,7 @@ namespace Neo.Plugins.RpcServer.Tests
         {
             var snapshot = _neoSystem.GetSnapshotCache();
             var contractState = TestUtils.GetContract();
-            snapshot.AddContract(contractState.Hash, contractState);
+            snapshot.AddContract(contractState.Hash, contractState, TestBlockchain.TheNeoSystem.NativeContractRepository);
             snapshot.Commit();
 
             var result = _rpcServer.GetContractState(new ContractNameOrHashOrId(contractState.Hash));
@@ -160,7 +160,7 @@ namespace Neo.Plugins.RpcServer.Tests
             var byName = _rpcServer.GetContractState(new ContractNameOrHashOrId("ContractManagement"));
             byId.ToString().Should().Be(byName.ToString());
 
-            snapshot.DeleteContract(contractState.Hash);
+            snapshot.DeleteContract(contractState.Hash, TestBlockchain.TheNeoSystem.NativeContractRepository);
             snapshot.Commit();
             Action act = () => _rpcServer.GetContractState(new ContractNameOrHashOrId(contractState.Hash));
             act.Should().Throw<RpcException>().WithMessage(RpcError.UnknownContract.Message);
@@ -205,7 +205,7 @@ namespace Neo.Plugins.RpcServer.Tests
         {
             var snapshot = _neoSystem.GetSnapshotCache();
             var contractState = TestUtils.GetContract();
-            snapshot.AddContract(contractState.Hash, contractState);
+            snapshot.AddContract(contractState.Hash, contractState, TestBlockchain.TheNeoSystem.NativeContractRepository);
             var key = new byte[] { 0x01 };
             var value = new byte[] { 0x02 };
             TestUtils.StorageItemAdd(snapshot, contractState.Id, key, value);
@@ -220,7 +220,7 @@ namespace Neo.Plugins.RpcServer.Tests
         {
             var snapshot = _neoSystem.GetSnapshotCache();
             var contractState = TestUtils.GetContract();
-            snapshot.AddContract(contractState.Hash, contractState);
+            snapshot.AddContract(contractState.Hash, contractState, TestBlockchain.TheNeoSystem.NativeContractRepository);
             var key = new byte[] { 0x01 };
             var value = new byte[] { 0x02 };
             TestUtils.StorageItemAdd(snapshot, contractState.Id, key, value);
@@ -244,7 +244,7 @@ namespace Neo.Plugins.RpcServer.Tests
             Enumerable.Range(0, 51).ToList().ForEach(i => TestUtils.StorageItemAdd(snapshot, contractState.Id, new byte[] { 0x01, (byte)i }, new byte[] { 0x02 }));
             snapshot.Commit();
             var result4 = _rpcServer.FindStorage(new ContractNameOrHashOrId(contractState.Hash), Convert.ToBase64String(new byte[] { 0x01 }), 0);
-            result4["next"].Should().Be(RpcServerSettings.Default.FindStoragePageSize);
+            result4["next"].Should().Be(RpcServerSettings.GetDefault(TestBlockchain.TheNeoSystem.NativeContractRepository).FindStoragePageSize);
             (result4["truncated"]).AsBoolean().Should().Be(true);
         }
 
@@ -266,12 +266,12 @@ namespace Neo.Plugins.RpcServer.Tests
             var snapshot = _neoSystem.GetSnapshotCache();
             var result = _rpcServer.GetNextBlockValidators();
 
-            var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, _neoSystem.Settings.ValidatorsCount);
+            var validators = TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.GetNextBlockValidators(snapshot, _neoSystem.Settings.ValidatorsCount);
             var expected = validators.Select(p =>
             {
                 var validator = new JObject();
                 validator["publickey"] = p.ToString();
-                validator["votes"] = (int)NativeContract.NEO.GetCandidateVote(snapshot, p);
+                validator["votes"] = (int)TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.GetCandidateVote(snapshot, p);
                 return validator;
             }).ToArray();
             Assert.AreEqual(new JArray(expected).ToString(), result.ToString());
@@ -284,12 +284,12 @@ namespace Neo.Plugins.RpcServer.Tests
 
             var result = _rpcServer.GetCandidates();
             var json = new JArray();
-            var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, _neoSystem.Settings.ValidatorsCount);
+            var validators = TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.GetNextBlockValidators(snapshot, _neoSystem.Settings.ValidatorsCount);
 
-            var key = new KeyBuilder(NativeContract.NEO.Id, 33).Add(ECPoint.Parse("02237309a0633ff930d51856db01d17c829a5b2e5cc2638e9c03b4cfa8e9c9f971", ECCurve.Secp256r1));
+            var key = new KeyBuilder(TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Id, 33).Add(ECPoint.Parse("02237309a0633ff930d51856db01d17c829a5b2e5cc2638e9c03b4cfa8e9c9f971", ECCurve.Secp256r1));
             snapshot.Add(key, new StorageItem(new CandidateState() { Registered = true, Votes = 10000 }));
             snapshot.Commit();
-            var candidates = NativeContract.NEO.GetCandidates(_neoSystem.GetSnapshotCache());
+            var candidates = TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.GetCandidates(_neoSystem.GetSnapshotCache());
             result = _rpcServer.GetCandidates();
             foreach (var candidate in candidates)
             {
@@ -307,7 +307,7 @@ namespace Neo.Plugins.RpcServer.Tests
         {
             var snapshot = _neoSystem.GetSnapshotCache();
             var result = _rpcServer.GetCommittee();
-            var committee = NativeContract.NEO.GetCommittee(snapshot);
+            var committee = TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.GetCommittee(snapshot);
             var expected = new JArray(committee.Select(p => (JToken)p.ToString()));
             Assert.AreEqual(expected.ToString(), result.ToString());
         }
@@ -316,7 +316,7 @@ namespace Neo.Plugins.RpcServer.Tests
         public void TestGetNativeContracts()
         {
             var result = _rpcServer.GetNativeContracts();
-            var contracts = new JArray(NativeContract.Contracts.Select(p => NativeContract.ContractManagement.GetContract(_neoSystem.GetSnapshotCache(), p.Hash).ToJson()));
+            var contracts = new JArray(TestBlockchain.TheNeoSystem.NativeContractRepository.Contracts.Select(p => TestBlockchain.TheNeoSystem.NativeContractRepository.ContractManagement.GetContract(_neoSystem.GetSnapshotCache(), p.Hash).ToJson()));
             Assert.AreEqual(contracts.ToString(), result.ToString());
         }
 
@@ -445,7 +445,7 @@ namespace Neo.Plugins.RpcServer.Tests
         {
             var snapshot = _neoSystem.GetSnapshotCache();
             var contractState = TestUtils.GetContract();
-            snapshot.AddContract(contractState.Hash, contractState);
+            snapshot.AddContract(contractState.Hash, contractState, TestBlockchain.TheNeoSystem.NativeContractRepository);
             snapshot.Commit();
 
             var key = new byte[] { 0x01 };

@@ -97,7 +97,7 @@ namespace Neo.Plugins.RpcServer.Tests
         public void TestGetWalletBalance()
         {
             TestUtilOpenWallet();
-            var assetId = NativeContract.NEO.Hash;
+            var assetId = TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Hash;
             var paramsArray = new JArray(assetId.ToString());
             var result = _rpcServer.GetWalletBalance(paramsArray);
             Assert.IsInstanceOfType(result, typeof(JObject));
@@ -194,7 +194,7 @@ namespace Neo.Plugins.RpcServer.Tests
         [TestMethod]
         public void TestSendFromNoWallet()
         {
-            var assetId = NativeContract.GAS.Hash;
+            var assetId = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Hash;
             var from = _walletAccount.Address;
             var to = _walletAccount.Address;
             var amount = "1";
@@ -207,7 +207,7 @@ namespace Neo.Plugins.RpcServer.Tests
         public void TestSendFrom()
         {
             TestUtilOpenWallet();
-            var assetId = NativeContract.GAS.Hash;
+            var assetId = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Hash;
             var from = _walletAccount.Address;
             var to = _walletAccount.Address;
             var amount = "1";
@@ -231,7 +231,7 @@ namespace Neo.Plugins.RpcServer.Tests
         public void TestSendMany()
         {
             var from = _walletAccount.Address;
-            var to = new JArray { new JObject { ["asset"] = NativeContract.GAS.Hash.ToString(), ["value"] = "1", ["address"] = _walletAccount.Address } };
+            var to = new JArray { new JObject { ["asset"] = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Hash.ToString(), ["value"] = "1", ["address"] = _walletAccount.Address } };
             var paramsArray = new JArray(from, to);
             var exception = Assert.ThrowsException<RpcException>(() => _rpcServer.SendMany(paramsArray), "Should throw RpcException for insufficient funds");
             Assert.AreEqual(exception.HResult, RpcError.NoOpenedWallet.Code);
@@ -250,7 +250,7 @@ namespace Neo.Plugins.RpcServer.Tests
         [TestMethod]
         public void TestSendToAddress()
         {
-            var assetId = NativeContract.GAS.Hash;
+            var assetId = TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Hash;
             var to = _walletAccount.Address;
             var amount = "1";
             var paramsArray = new JArray(assetId.ToString(), to, amount);
@@ -296,7 +296,7 @@ namespace Neo.Plugins.RpcServer.Tests
         public void TestGetWalletBalance_WhenWalletNotOpen()
         {
             _rpcServer.wallet = null;
-            var exception = Assert.ThrowsException<RpcException>(() => _rpcServer.GetWalletBalance(new JArray(NativeContract.NEO.Hash.ToString())), "Should throw RpcException for no opened wallet");
+            var exception = Assert.ThrowsException<RpcException>(() => _rpcServer.GetWalletBalance(new JArray(TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Hash.ToString())), "Should throw RpcException for no opened wallet");
             Assert.AreEqual(exception.HResult, RpcError.NoOpenedWallet.Code);
         }
 
@@ -369,7 +369,7 @@ namespace Neo.Plugins.RpcServer.Tests
 
             // Test valid cancel
             _rpcServer.wallet = _wallet;
-            JObject resp = (JObject)_rpcServer.SendFrom(new JArray(NativeContract.GAS.Hash.ToString(), _walletAccount.Address, _walletAccount.Address, "1"));
+            JObject resp = (JObject)_rpcServer.SendFrom(new JArray(TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Hash.ToString(), _walletAccount.Address, _walletAccount.Address, "1"));
             string txHash = resp["hash"].AsString();
             resp = (JObject)_rpcServer.CancelTransaction(new JArray(txHash, new JArray(ValidatorAddress), "1"));
             Assert.AreEqual(resp.Count, 12);
@@ -408,7 +408,7 @@ namespace ContractWithVerify{public class ContractWithVerify:SmartContract {
 """;
             string base64NefFile = "TkVGM05lby5Db21waWxlci5DU2hhcnAgMy43LjQrNjAzNGExODIxY2E3MDk0NjBlYzMxMzZjNzBjMmRjYzNiZWEuLi4AAAAAAGNXAAJ5JgQiGEEtUQgwE84MASDbMEGb9mfOQeY/GIRADAEg2zBBm/ZnzkGSXegxStgkCUrKABQoAzpB\u002BCfsjEBXAAERiEoQeNBBm/ZnzkGSXegxStgkCUrKABQoAzpB\u002BCfsjEDo2WhC";
             string manifest = """{"name":"ContractWithVerify","groups":[],"features":{},"supportedstandards":[],"abi":{"methods":[{"name":"_deploy","parameters":[{"name":"data","type":"Any"},{"name":"update","type":"Boolean"}],"returntype":"Void","offset":0,"safe":false},{"name":"verify","parameters":[],"returntype":"Boolean","offset":31,"safe":false},{"name":"verify","parameters":[{"name":"prefix","type":"Integer"}],"returntype":"Boolean","offset":63,"safe":false}],"events":[]},"permissions":[],"trusts":[],"extra":{"nef":{"optimization":"All"}}}""";
-            JObject deployResp = (JObject)_rpcServer.InvokeFunction(new JArray([ContractManagement.ContractManagement.Hash.ToString(),
+            JObject deployResp = (JObject)_rpcServer.InvokeFunction(new JArray([TestBlockchain.TheNeoSystem.NativeContractRepository.ContractManagement.Hash.ToString(),
                 "deploy",
                 new JArray([
                     new JObject() { ["type"] = nameof(ContractParameterType.ByteArray), ["value"] = base64NefFile },
@@ -421,13 +421,13 @@ namespace ContractWithVerify{public class ContractWithVerify:SmartContract {
             Transaction? tx = new Transaction
             {
                 Nonce = 233,
-                ValidUntilBlock = NativeContract.Ledger.CurrentIndex(snapshot) + _neoSystem.Settings.MaxValidUntilBlockIncrement,
+                ValidUntilBlock = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.CurrentIndex(snapshot) + _neoSystem.Settings.MaxValidUntilBlockIncrement,
                 Signers = [new Signer() { Account = ValidatorScriptHash, Scopes = WitnessScope.CalledByEntry }],
                 Attributes = Array.Empty<TransactionAttribute>(),
                 Script = Convert.FromBase64String(deployResp["script"].AsString()),
                 Witnesses = null,
             };
-            ApplicationEngine engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: _neoSystem.Settings, gas: 1200_0000_0000);
+            ApplicationEngine engine = ApplicationEngine.Run(tx.Script, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, container: tx, settings: _neoSystem.Settings, gas: 1200_0000_0000);
             engine.SnapshotCache.Commit();
 
             // invoke verify without signer; should return false
@@ -498,7 +498,7 @@ namespace ContractWithVerify{public class ContractWithVerify:SmartContract {
             };
 
             var snapshot = _neoSystem.GetSnapshotCache();
-            snapshot.AddContract(state.Hash, state);
+            snapshot.AddContract(state.Hash, state, TestBlockchain.TheNeoSystem.NativeContractRepository);
             snapshot.Add(storageKey, storageItem);
             snapshot.Commit();
             return state.Hash;

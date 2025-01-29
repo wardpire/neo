@@ -99,14 +99,14 @@ namespace Neo.Plugins.StateService.Network
             writer.Write(RootHash);
         }
 
-        public bool Verify(ProtocolSettings settings, DataCache snapshot)
+        public bool Verify(ProtocolSettings settings, DataCache snapshot, NativeContractRepository nativeContractRepository)
         {
-            return this.VerifyWitnesses(settings, snapshot, 2_00000000L);
+            return this.VerifyWitnesses(settings, nativeContractRepository,  snapshot, 2_00000000L);
         }
 
-        public UInt160[] GetScriptHashesForVerifying(DataCache snapshot)
+        public UInt160[] GetScriptHashesForVerifying(DataCache snapshot, NativeContractRepository nativeContractRepository)
         {
-            ECPoint[] validators = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.StateValidator, Index);
+            ECPoint[] validators = nativeContractRepository.RoleManagement.GetDesignatedByRole(snapshot, Role.StateValidator, Index);
             if (validators.Length < 1) throw new InvalidOperationException("No script hash for state root verifying");
             return new UInt160[] { Contract.GetBFTAddress(validators) };
         }

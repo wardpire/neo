@@ -41,7 +41,7 @@ namespace Neo.Network.RPC.Tests
 
             // use real http client with mocked handler here
             var httpClient = new HttpClient(handlerMock.Object);
-            rpc = new RpcClient(httpClient, new Uri("http://seed1.neo.org:10331"), null);
+            rpc = new RpcClient(new SmartContract.Native.NativeContractRepository(), httpClient, new Uri("http://seed1.neo.org:10331"), null);
             foreach (var test in TestUtils.RpcTestCases)
             {
                 MockResponse(test.Request, test.Response);
@@ -101,7 +101,7 @@ namespace Neo.Network.RPC.Tests
                .Verifiable();
 
             var httpClient = new HttpClient(handlerMock.Object);
-            var client = new RpcClient(httpClient, new Uri("http://seed1.neo.org:10331"), null);
+            var client = new RpcClient(new SmartContract.Native.NativeContractRepository(), httpClient, new Uri("http://seed1.neo.org:10331"), null);
             var response = await client.SendAsync(test.Request, false);
 
             Assert.IsNull(response.Result);
@@ -114,7 +114,7 @@ namespace Neo.Network.RPC.Tests
         public void TestConstructorByUrlAndDispose()
         {
             //dummy url for test
-            var client = new RpcClient(new Uri("http://www.xxx.yyy"));
+            var client = new RpcClient(new SmartContract.Native.NativeContractRepository(), new Uri("http://www.xxx.yyy"));
             Action action = () => client.Dispose();
             action.Should().NotThrow<Exception>();
         }
@@ -122,7 +122,7 @@ namespace Neo.Network.RPC.Tests
         [TestMethod]
         public void TestConstructorWithBasicAuth()
         {
-            var client = new RpcClient(new Uri("http://www.xxx.yyy"), "krain", "123456");
+            var client = new RpcClient(new SmartContract.Native.NativeContractRepository(), new Uri("http://www.xxx.yyy"), "krain", "123456");
             client.Dispose();
         }
 

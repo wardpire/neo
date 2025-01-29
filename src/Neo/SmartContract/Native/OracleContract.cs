@@ -48,14 +48,14 @@ namespace Neo.SmartContract.Native
         [ContractEvent(1, name: "OracleResponse",
             "Id", ContractParameterType.Integer,
             "OriginalTx", ContractParameterType.Hash256)]
-        internal OracleContract() : base() { }
+        internal OracleContract(NativeContractRepository nativeContractRepository) : base(nativeContractRepository) { }
 
         [ContractMethod(CpuFee = 1 << 15, RequiredCallFlags = CallFlags.States)]
         private void SetPrice(ApplicationEngine engine, long price)
         {
             if (price <= 0)
                 throw new ArgumentOutOfRangeException(nameof(price));
-            if (!CheckCommittee(engine)) throw new InvalidOperationException();
+            if (!_repository.CheckCommittee(engine)) throw new InvalidOperationException();
             engine.SnapshotCache.GetAndChange(CreateStorageKey(Prefix_Price)).Set(price);
         }
 
@@ -166,7 +166,7 @@ namespace Neo.SmartContract.Native
                 if (list.Count == 0) engine.SnapshotCache.Delete(key);
 
                 //Mint GAS for oracle nodes
-                nodes ??= RoleManagement.GetDesignatedByRole(engine.SnapshotCache, Role.Oracle, engine.PersistingBlock.Index).Select(p => (Contract.CreateSignatureRedeemScript(p).ToScriptHash(), BigInteger.Zero)).ToArray();
+                nodes ??= _repository.RoleManagement.GetDesignatedByRole(engine.SnapshotCache, Role.Oracle, engine.PersistingBlock.Index).Select(p => (Contract.CreateSignatureRedeemScript(p).ToScriptHash(), BigInteger.Zero)).ToArray();
                 if (nodes.Length > 0)
                 {
                     int index = (int)(response.Id % (ulong)nodes.Length);
@@ -178,7 +178,7 @@ namespace Neo.SmartContract.Native
                 foreach (var (account, gas) in nodes)
                 {
                     if (gas.Sign > 0)
-                        await GAS.Mint(engine, account, gas, false);
+                        await _repository.GAS.Mint(engine, account, gas, false);
                 }
             }
         }
@@ -197,7 +197,7 @@ namespace Neo.SmartContract.Native
 
             //Mint gas for the response
             engine.AddFee(gasForResponse);
-            await GAS.Mint(engine, Hash, gasForResponse, false);
+            await _repository.GAS.Mint(engine, Hash, gasForResponse, false);
 
             //Increase the request id
             StorageItem item_id = engine.SnapshotCache.GetAndChange(CreateStorageKey(Prefix_RequestId));
@@ -205,7 +205,7 @@ namespace Neo.SmartContract.Native
             item_id.Add(1);
 
             //Put the request to storage
-            if (ContractManagement.GetContract(engine.SnapshotCache, engine.CallingScriptHash) is null)
+            if (_repository.ContractManagement.GetContract(engine.SnapshotCache, engine.CallingScriptHash) is null)
                 throw new InvalidOperationException();
             engine.SnapshotCache.Add(CreateStorageKey(Prefix_Request).AddBigEndian(id), new StorageItem(new OracleRequest
             {

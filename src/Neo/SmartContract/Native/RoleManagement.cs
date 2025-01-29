@@ -27,7 +27,7 @@ namespace Neo.SmartContract.Native
         [ContractEvent(0, name: "Designation",
             "Role", ContractParameterType.Integer,
             "BlockIndex", ContractParameterType.Integer)]
-        internal RoleManagement() : base() { }
+        internal RoleManagement(NativeContractRepository nativeContractRepository) : base(nativeContractRepository) { }
 
         /// <summary>
         /// Gets the list of nodes for the specified role.
@@ -41,7 +41,7 @@ namespace Neo.SmartContract.Native
         {
             if (!Enum.IsDefined(typeof(Role), role))
                 throw new ArgumentOutOfRangeException(nameof(role));
-            if (Ledger.CurrentIndex(snapshot) + 1 < index)
+            if (_repository.Ledger.CurrentIndex(snapshot) + 1 < index)
                 throw new ArgumentOutOfRangeException(nameof(index));
             byte[] key = CreateStorageKey((byte)role).AddBigEndian(index).ToArray();
             byte[] boundary = CreateStorageKey((byte)role).ToArray();
@@ -57,7 +57,7 @@ namespace Neo.SmartContract.Native
                 throw new ArgumentException(null, nameof(nodes));
             if (!Enum.IsDefined(typeof(Role), role))
                 throw new ArgumentOutOfRangeException(nameof(role));
-            if (!CheckCommittee(engine))
+            if (!_repository.CheckCommittee(engine))
                 throw new InvalidOperationException(nameof(DesignateAsRole));
             if (engine.PersistingBlock is null)
                 throw new InvalidOperationException(nameof(DesignateAsRole));

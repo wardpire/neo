@@ -31,7 +31,7 @@ namespace Neo.Ledger
         protected override void OnReceive(object message)
         {
             if (message is not Preverify preverify) return;
-            system.Blockchain.Tell(new PreverifyCompleted(preverify.Transaction, preverify.Relay, preverify.Transaction.VerifyStateIndependent(system.Settings)), Sender);
+            system.Blockchain.Tell(new PreverifyCompleted(preverify.Transaction, preverify.Relay, preverify.Transaction.VerifyStateIndependent(system.Settings, system.NativeContractRepository)), Sender);
         }
 
         internal static Props Props(NeoSystem system)

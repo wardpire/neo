@@ -32,7 +32,7 @@ namespace Neo.UnitTests
         static TestBlockchain()
         {
             Console.WriteLine("initialize NeoSystem");
-            TheNeoSystem = new NeoSystem(TestProtocolSettings.Default, new StoreProvider());
+            TheNeoSystem = new NeoSystem(TestProtocolSettings.Default, new Neo.Plugins.PluginRepository(), new StoreProvider());
         }
 
         internal static void ResetStore()

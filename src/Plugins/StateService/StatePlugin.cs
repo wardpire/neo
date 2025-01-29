@@ -100,7 +100,7 @@ namespace Neo.Plugins.StateService
         void ICommittingHandler.Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot, IReadOnlyList<ApplicationExecuted> applicationExecutedList)
         {
             if (system.Settings.Network != Settings.Default.Network) return;
-            StateStore.Singleton.UpdateLocalStateRootSnapshot(block.Index, snapshot.GetChangeSet().Where(p => p.State != TrackState.None).Where(p => p.Key.Id != NativeContract.Ledger.Id).ToList());
+            StateStore.Singleton.UpdateLocalStateRootSnapshot(block.Index, snapshot.GetChangeSet().Where(p => p.State != TrackState.None).Where(p => p.Key.Id != system.NativeContractRepository.Ledger.Id).ToList());
         }
 
         void ICommittedHandler.Blockchain_Committed_Handler(NeoSystem system, Block block)
@@ -273,7 +273,7 @@ namespace Neo.Plugins.StateService
         private ContractState GetHistoricalContractState(Trie trie, UInt160 script_hash)
         {
             const byte prefix = 8;
-            StorageKey skey = new KeyBuilder(NativeContract.ContractManagement.Id, prefix).Add(script_hash);
+            StorageKey skey = new KeyBuilder(_system.NativeContractRepository.ContractManagement.Id, prefix).Add(script_hash);
             return trie.TryGetValue(skey.ToArray(), out var value) ? value.AsSerializable<StorageItem>().GetInteroperable<ContractState>() : null;
         }
 

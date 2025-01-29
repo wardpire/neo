@@ -19,6 +19,7 @@ using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
 using System;
+using System.ComponentModel;
 using System.Numerics;
 
 namespace Neo.CLI
@@ -32,7 +33,7 @@ namespace Neo.CLI
         [ConsoleCommand("register candidate", Category = "Vote Commands")]
         private void OnRegisterCandidateCommand(UInt160 account)
         {
-            var testGas = NativeContract.NEO.GetRegisterPrice(NeoSystem.StoreView) + (BigInteger)Math.Pow(10, NativeContract.GAS.Decimals) * 10;
+            var testGas = NeoSystem.NativeContractRepository.NEO.GetRegisterPrice(NeoSystem.StoreView) + (BigInteger)Math.Pow(10, NeoSystem.NativeContractRepository.GAS.Decimals) * 10;
             if (NoWallet()) return;
             WalletAccount currentAccount = CurrentWallet!.GetAccount(account);
 
@@ -54,7 +55,7 @@ namespace Neo.CLI
             byte[] script;
             using (ScriptBuilder scriptBuilder = new())
             {
-                scriptBuilder.EmitDynamicCall(NativeContract.NEO.Hash, "registerCandidate", publicKey);
+                scriptBuilder.EmitDynamicCall(NeoSystem.NativeContractRepository.NEO.Hash, "registerCandidate", publicKey);
                 script = scriptBuilder.ToArray();
             }
 
@@ -89,7 +90,7 @@ namespace Neo.CLI
             byte[] script;
             using (ScriptBuilder scriptBuilder = new())
             {
-                scriptBuilder.EmitDynamicCall(NativeContract.NEO.Hash, "unregisterCandidate", publicKey);
+                scriptBuilder.EmitDynamicCall(NeoSystem.NativeContractRepository.NEO.Hash, "unregisterCandidate", publicKey);
                 script = scriptBuilder.ToArray();
             }
 
@@ -108,7 +109,7 @@ namespace Neo.CLI
             byte[] script;
             using (ScriptBuilder scriptBuilder = new())
             {
-                scriptBuilder.EmitDynamicCall(NativeContract.NEO.Hash, "vote", senderAccount, publicKey);
+                scriptBuilder.EmitDynamicCall(NeoSystem.NativeContractRepository.NEO.Hash, "vote", senderAccount, publicKey);
                 script = scriptBuilder.ToArray();
             }
 
@@ -126,7 +127,7 @@ namespace Neo.CLI
             byte[] script;
             using (ScriptBuilder scriptBuilder = new())
             {
-                scriptBuilder.EmitDynamicCall(NativeContract.NEO.Hash, "vote", senderAccount, null);
+                scriptBuilder.EmitDynamicCall(NeoSystem.NativeContractRepository.NEO.Hash, "vote", senderAccount, null);
                 script = scriptBuilder.ToArray();
             }
 
@@ -139,7 +140,7 @@ namespace Neo.CLI
         [ConsoleCommand("get candidates", Category = "Vote Commands")]
         private void OnGetCandidatesCommand()
         {
-            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getCandidates", out StackItem result, null, null, false)) return;
+            if (!OnInvokeWithResult(NeoSystem.NativeContractRepository.NEO.Hash, "getCandidates", out StackItem result, null, null, false)) return;
 
             var resJArray = (VM.Types.Array)result;
 
@@ -165,7 +166,7 @@ namespace Neo.CLI
         [ConsoleCommand("get committee", Category = "Vote Commands")]
         private void OnGetCommitteeCommand()
         {
-            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getCommittee", out StackItem result, null, null, false)) return;
+            if (!OnInvokeWithResult(NeoSystem.NativeContractRepository.NEO.Hash, "getCommittee", out StackItem result, null, null, false)) return;
 
             var resJArray = (VM.Types.Array)result;
 
@@ -187,7 +188,7 @@ namespace Neo.CLI
         [ConsoleCommand("get next validators", Category = "Vote Commands")]
         private void OnGetNextBlockValidatorsCommand()
         {
-            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getNextBlockValidators", out StackItem result, null, null, false)) return;
+            if (!OnInvokeWithResult(NeoSystem.NativeContractRepository.NEO.Hash, "getNextBlockValidators", out StackItem result, null, null, false)) return;
 
             var resJArray = (VM.Types.Array)result;
 
@@ -216,7 +217,7 @@ namespace Neo.CLI
                 ["value"] = address.ToString()
             };
 
-            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getAccountState", out StackItem result, null, new JArray(arg))) return;
+            if (!OnInvokeWithResult(NeoSystem.NativeContractRepository.NEO.Hash, "getAccountState", out StackItem result, null, new JArray(arg))) return;
             Console.WriteLine();
             if (result.IsNull)
             {
@@ -240,7 +241,7 @@ namespace Neo.CLI
             }
             var publickey = ECPoint.Parse(((ByteString)resJArray[2])?.GetSpan().ToHexString(), ECCurve.Secp256r1);
             ConsoleHelper.Info("Voted: ", Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion));
-            ConsoleHelper.Info("Amount: ", new BigDecimal(((Integer)resJArray[0]).GetInteger(), NativeContract.NEO.Decimals).ToString());
+            ConsoleHelper.Info("Amount: ", new BigDecimal(((Integer)resJArray[0]).GetInteger(),NeoSystem.NativeContractRepository.NEO.Decimals).ToString());
             ConsoleHelper.Info("Block: ", ((Integer)resJArray[1]).GetInteger().ToString());
         }
     }

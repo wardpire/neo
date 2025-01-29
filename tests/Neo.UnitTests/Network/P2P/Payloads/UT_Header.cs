@@ -70,7 +70,7 @@ namespace Neo.UnitTests.Network.P2P.Payloads
                 Hashes = Array.Empty<UInt256>()
             });
 
-            var trim = NativeContract.Ledger.GetTrimmedBlock(snapshotCache, uut.Hash);
+            var trim = TestBlockchain.TheNeoSystem.NativeContractRepository.Ledger.GetTrimmedBlock(snapshotCache, uut.Hash);
             var header = trim.Header;
 
             header.Version.Should().Be(uut.Version);

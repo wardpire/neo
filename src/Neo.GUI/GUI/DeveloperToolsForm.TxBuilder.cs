@@ -30,7 +30,7 @@ namespace Neo.GUI
         private void button8_Click(object sender, EventArgs e)
         {
             TransactionWrapper wrapper = (TransactionWrapper)propertyGrid1.SelectedObject;
-            ContractParametersContext context = new ContractParametersContext(Program.Service.NeoSystem.StoreView, wrapper.Unwrap(), Program.Service.NeoSystem.Settings.Network);
+            ContractParametersContext context = new ContractParametersContext(Program.Service.NeoSystem.StoreView, wrapper.Unwrap(), Program.Service.NeoSystem.Settings.Network, Program.Service.NeoSystem.NativeContractRepository);
             InformationBox.Show(context.ToString(), "ParametersContext", "ParametersContext");
         }
     }

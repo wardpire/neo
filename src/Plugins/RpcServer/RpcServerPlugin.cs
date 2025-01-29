@@ -28,10 +28,6 @@ namespace Neo.Plugins.RpcServer
 
         protected override void Configure()
         {
-            settings = new Settings(GetConfiguration());
-            foreach (RpcServerSettings s in settings.Servers)
-                if (servers.TryGetValue(s.Network, out RpcServer server))
-                    server.UpdateSettings(s);
         }
 
         public override void Dispose()
@@ -43,6 +39,11 @@ namespace Neo.Plugins.RpcServer
 
         protected override void OnSystemLoaded(NeoSystem system)
         {
+            settings = new Settings(GetConfiguration(),system.NativeContractRepository);
+            foreach (RpcServerSettings server in settings.Servers)
+                if (servers.TryGetValue(server.Network, out RpcServer rpcServer))
+                    rpcServer.UpdateSettings(server);
+
             RpcServerSettings s = settings.Servers.FirstOrDefault(p => p.Network == system.Settings.Network);
             if (s is null) return;
 

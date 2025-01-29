@@ -31,7 +31,7 @@ namespace Neo.Plugins.RpcServer
     {
         private class DummyWallet : Wallet
         {
-            public DummyWallet(ProtocolSettings settings) : base(null, settings) { }
+            public DummyWallet(ProtocolSettings settings, NativeContractRepository nativeContractRepository) : base(null, settings, nativeContractRepository) { }
             public override string Name => "";
             public override Version Version => new();
 
@@ -131,9 +131,9 @@ namespace Neo.Plugins.RpcServer
             BigInteger datoshi = BigInteger.Zero;
             using (var snapshot = system.GetSnapshotCache())
             {
-                uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
+                uint height = system.NativeContractRepository.Ledger.CurrentIndex(snapshot) + 1;
                 foreach (UInt160 account in wallet.GetAccounts().Select(p => p.ScriptHash))
-                    datoshi += NativeContract.NEO.UnclaimedGas(snapshot, account, height);
+                    datoshi += system.NativeContractRepository.NEO.UnclaimedGas(snapshot, account, height);
             }
             return datoshi.ToString();
         }
@@ -178,7 +178,7 @@ namespace Neo.Plugins.RpcServer
 
             JObject account = new();
             var networkfee = Wallets.Helper.CalculateNetworkFee(
-                tx.AsSerializable<Transaction>(), system.StoreView, system.Settings,
+                tx.AsSerializable<Transaction>(), system.StoreView, system.Settings, system.NativeContractRepository,
                 wallet is not null ? a => wallet.GetAccount(a).Contract.Script : _ => null);
             account["networkfee"] = networkfee.ToString();
             return account;
@@ -219,7 +219,7 @@ namespace Neo.Plugins.RpcServer
             File.Exists(path).True_Or(RpcError.WalletNotFound);
             try
             {
-                wallet = Wallet.Open(path, password, system.Settings).NotNull_Or(RpcError.WalletNotSupported);
+                wallet = Wallet.Open(path, password, system.Settings, system.NativeContractRepository).NotNull_Or(RpcError.WalletNotSupported);
             }
             catch (NullReferenceException)
             {
@@ -253,7 +253,7 @@ namespace Neo.Plugins.RpcServer
                 result["exception"] = GetExceptionMessage(e);
                 return;
             }
-            ContractParametersContext context = new(system.StoreView, tx, settings.Network);
+            ContractParametersContext context = new(system.StoreView, tx, settings.Network, system.NativeContractRepository);
             wallet.Sign(context);
             if (context.Completed)
             {
@@ -280,7 +280,7 @@ namespace Neo.Plugins.RpcServer
             UInt160 from = AddressToScriptHash(_params[1].AsString(), system.Settings.AddressVersion);
             UInt160 to = AddressToScriptHash(_params[2].AsString(), system.Settings.AddressVersion);
             using var snapshot = system.GetSnapshotCache();
-            AssetDescriptor descriptor = new(snapshot, system.Settings, assetId);
+            AssetDescriptor descriptor = new(snapshot, system.Settings, assetId, system.NativeContractRepository);
             BigDecimal amount = new(BigInteger.Parse(_params[3].AsString()), descriptor.Decimals);
             (amount.Sign > 0).True_Or(RpcErrorFactory.InvalidParams("Amount can't be negative."));
             Signer[] signers = _params.Count >= 5 ? ((JArray)_params[4]).Select(p => new Signer() { Account = AddressToScriptHash(p.AsString(), system.Settings.AddressVersion), Scopes = WitnessScope.CalledByEntry }).ToArray() : null;
@@ -295,14 +295,14 @@ namespace Neo.Plugins.RpcServer
                 }
             }, from, signers), RpcError.InvalidRequest.WithData("Can not process this request.")).NotNull_Or(RpcError.InsufficientFunds);
 
-            ContractParametersContext transContext = new(snapshot, tx, settings.Network);
+            ContractParametersContext transContext = new(snapshot, tx, settings.Network, system.NativeContractRepository);
             wallet.Sign(transContext);
             if (!transContext.Completed)
                 return transContext.ToJson();
             tx.Witnesses = transContext.GetWitnesses();
             if (tx.Size > 1024)
             {
-                long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
+                long calFee = tx.Size * system.NativeContractRepository.Policy.GetFeePerByte(snapshot) + 100000;
                 if (tx.NetworkFee < calFee)
                     tx.NetworkFee = calFee;
             }
@@ -359,7 +359,7 @@ namespace Neo.Plugins.RpcServer
             for (int i = 0; i < to.Count; i++)
             {
                 UInt160 asset_id = UInt160.Parse(to[i]["asset"].AsString());
-                AssetDescriptor descriptor = new(snapshot, system.Settings, asset_id);
+                AssetDescriptor descriptor = new(snapshot, system.Settings, asset_id, system.NativeContractRepository);
                 outputs[i] = new TransferOutput
                 {
                     AssetId = asset_id,
@@ -370,14 +370,14 @@ namespace Neo.Plugins.RpcServer
             }
             Transaction tx = wallet.MakeTransaction(snapshot, outputs, from, signers).NotNull_Or(RpcError.InsufficientFunds);
 
-            ContractParametersContext transContext = new(snapshot, tx, settings.Network);
+            ContractParametersContext transContext = new(snapshot, tx, settings.Network, system.NativeContractRepository);
             wallet.Sign(transContext);
             if (!transContext.Completed)
                 return transContext.ToJson();
             tx.Witnesses = transContext.GetWitnesses();
             if (tx.Size > 1024)
             {
-                long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
+                long calFee = tx.Size * system.NativeContractRepository.Policy.GetFeePerByte(snapshot) + 100000;
                 if (tx.NetworkFee < calFee)
                     tx.NetworkFee = calFee;
             }
@@ -398,7 +398,7 @@ namespace Neo.Plugins.RpcServer
             UInt160 assetId = Result.Ok_Or(() => UInt160.Parse(_params[0].AsString()), RpcError.InvalidParams.WithData($"Invalid asset hash: {_params[0]}"));
             UInt160 to = AddressToScriptHash(_params[1].AsString(), system.Settings.AddressVersion);
             using var snapshot = system.GetSnapshotCache();
-            AssetDescriptor descriptor = new(snapshot, system.Settings, assetId);
+            AssetDescriptor descriptor = new(snapshot, system.Settings, assetId, system.NativeContractRepository);
             BigDecimal amount = new(BigInteger.Parse(_params[2].AsString()), descriptor.Decimals);
             (amount.Sign > 0).True_Or(RpcError.InvalidParams);
             Transaction tx = wallet.MakeTransaction(snapshot, new[]
@@ -411,14 +411,14 @@ namespace Neo.Plugins.RpcServer
                 }
             }).NotNull_Or(RpcError.InsufficientFunds);
 
-            ContractParametersContext transContext = new(snapshot, tx, settings.Network);
+            ContractParametersContext transContext = new(snapshot, tx, settings.Network, system.NativeContractRepository);
             wallet.Sign(transContext);
             if (!transContext.Completed)
                 return transContext.ToJson();
             tx.Witnesses = transContext.GetWitnesses();
             if (tx.Size > 1024)
             {
-                long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
+                long calFee = tx.Size * system.NativeContractRepository.Policy.GetFeePerByte(snapshot) + 100000;
                 if (tx.NetworkFee < calFee)
                     tx.NetworkFee = calFee;
             }
@@ -437,7 +437,7 @@ namespace Neo.Plugins.RpcServer
         {
             CheckWallet();
             var txid = Result.Ok_Or(() => UInt256.Parse(_params[0].AsString()), RpcError.InvalidParams.WithData($"Invalid txid: {_params[0]}"));
-            NativeContract.Ledger.GetTransactionState(system.StoreView, txid).Null_Or(RpcErrorFactory.AlreadyExists("This tx is already confirmed, can't be cancelled."));
+            system.NativeContractRepository.Ledger.GetTransactionState(system.StoreView, txid).Null_Or(RpcErrorFactory.AlreadyExists("This tx is already confirmed, can't be cancelled."));
 
             var conflict = new TransactionAttribute[] { new Conflicts() { Hash = txid } };
             Signer[] signers = _params.Count >= 2 ? ((JArray)_params[1]).Select(j => new Signer() { Account = AddressToScriptHash(j.AsString(), system.Settings.AddressVersion), Scopes = WitnessScope.None }).ToArray() : Array.Empty<Signer>();
@@ -458,7 +458,7 @@ namespace Neo.Plugins.RpcServer
             else if (_params.Count >= 3)
             {
                 var extraFee = _params[2].AsString();
-                AssetDescriptor descriptor = new(system.StoreView, system.Settings, NativeContract.GAS.Hash);
+                AssetDescriptor descriptor = new(system.StoreView, system.Settings, system.NativeContractRepository.GAS.Hash, system.NativeContractRepository);
                 (BigDecimal.TryParse(extraFee, descriptor.Decimals, out BigDecimal decimalExtraFee) && decimalExtraFee.Sign > 0).True_Or(RpcErrorFactory.InvalidParams("Incorrect amount format."));
 
                 tx.NetworkFee += (long)decimalExtraFee.Value;
@@ -493,7 +493,7 @@ namespace Neo.Plugins.RpcServer
         private JObject GetVerificationResult(UInt160 scriptHash, ContractParameter[] args, Signer[] signers = null, Witness[] witnesses = null)
         {
             using var snapshot = system.GetSnapshotCache();
-            var contract = NativeContract.ContractManagement.GetContract(snapshot, scriptHash).NotNull_Or(RpcError.UnknownContract);
+            var contract = system.NativeContractRepository.ContractManagement.GetContract(snapshot, scriptHash).NotNull_Or(RpcError.UnknownContract);
             var md = contract.Manifest.Abi.GetMethod(ContractBasicMethod.Verify, args.Count()).NotNull_Or(RpcErrorFactory.InvalidContractVerification(contract.Hash, args.Count()));
             (md.ReturnType == ContractParameterType.Boolean).True_Or(RpcErrorFactory.InvalidContractVerification("The verify method doesn't return boolean value."));
             Transaction tx = new()
@@ -503,7 +503,7 @@ namespace Neo.Plugins.RpcServer
                 Witnesses = witnesses,
                 Script = new[] { (byte)OpCode.RET }
             };
-            using ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Verification, tx, snapshot.CloneCache(), settings: system.Settings);
+            using ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Verification, tx, snapshot.CloneCache(), system.NativeContractRepository, settings: system.Settings);
             engine.LoadContract(contract, md, CallFlags.ReadOnly);
 
             var invocationScript = Array.Empty<byte>();
@@ -542,7 +542,7 @@ namespace Neo.Plugins.RpcServer
         /// <returns>A JSON object containing the transaction details.</returns>
         private JObject SignAndRelay(DataCache snapshot, Transaction tx)
         {
-            ContractParametersContext context = new(snapshot, tx, settings.Network);
+            ContractParametersContext context = new(snapshot, tx, settings.Network, system.NativeContractRepository);
             wallet.Sign(context);
             if (context.Completed)
             {

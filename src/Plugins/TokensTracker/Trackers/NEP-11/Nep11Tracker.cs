@@ -64,7 +64,7 @@ namespace Neo.Plugins.Trackers.NEP_11
                     if (notifyEventArgs.EventName != "Transfer" || notifyEventArgs?.State is not Array stateItems ||
                         stateItems.Count == 0)
                         continue;
-                    var contract = NativeContract.ContractManagement.GetContract(snapshot, notifyEventArgs.ScriptHash);
+                    var contract = _neoSystem.NativeContractRepository.ContractManagement.GetContract(snapshot, notifyEventArgs.ScriptHash);
                     if (contract?.Manifest.SupportedStandards.Contains("NEP-11") == true)
                     {
                         try
@@ -87,7 +87,7 @@ namespace Neo.Plugins.Trackers.NEP_11
             {
                 if (!contracts.ContainsKey(transferRecord.asset))
                 {
-                    var state = NativeContract.ContractManagement.GetContract(snapshot, transferRecord.asset);
+                    var state = _neoSystem.NativeContractRepository.ContractManagement.GetContract(snapshot, transferRecord.asset);
                     var balanceMethod = state.Manifest.Abi.GetMethod("balanceOf", 1);
                     var balanceMethod2 = state.Manifest.Abi.GetMethod("balanceOf", 2);
                     if (balanceMethod == null && balanceMethod2 == null)
@@ -117,7 +117,7 @@ namespace Neo.Plugins.Trackers.NEP_11
             using ScriptBuilder sb = new();
             sb.EmitDynamicCall(record.asset, "balanceOf", record.from, record.tokenId);
             sb.EmitDynamicCall(record.asset, "balanceOf", record.to, record.tokenId);
-            using ApplicationEngine engine = ApplicationEngine.Run(sb.ToArray(), snapshot, settings: _neoSystem.Settings, gas: 3400_0000);
+            using ApplicationEngine engine = ApplicationEngine.Run(sb.ToArray(), snapshot, _neoSystem.NativeContractRepository, settings: _neoSystem.Settings, gas: 3400_0000);
             if (engine.State.HasFlag(VMState.FAULT) || engine.ResultStack.Count != 2)
             {
                 Log($"Fault: from[{record.from}] to[{record.to}] get {record.asset} token [{record.tokenId.ToHexString()}] balance fault", LogLevel.Warning);
@@ -231,7 +231,7 @@ namespace Neo.Plugins.Trackers.NEP_11
             byte[] prefix = Key(Nep11BalancePrefix, userScriptHash);
             foreach (var (key, value) in _db.FindPrefix<Nep11BalanceKey, TokenBalance>(prefix))
             {
-                if (NativeContract.ContractManagement.GetContract(_neoSystem.StoreView, key.AssetScriptHash) is null)
+                if (_neoSystem.NativeContractRepository.ContractManagement.GetContract(_neoSystem.StoreView, key.AssetScriptHash) is null)
                     continue;
                 if (!map.TryGetValue(key.AssetScriptHash, out var list))
                 {
@@ -252,10 +252,10 @@ namespace Neo.Plugins.Trackers.NEP_11
                     script.EmitDynamicCall(key, "decimals");
                     script.EmitDynamicCall(key, "symbol");
 
-                    var engine = ApplicationEngine.Run(script.ToArray(), _neoSystem.StoreView, settings: _neoSystem.Settings);
+                    var engine = ApplicationEngine.Run(script.ToArray(), _neoSystem.StoreView, _neoSystem.NativeContractRepository, settings: _neoSystem.Settings);
                     var symbol = engine.ResultStack.Pop().GetString();
                     var decimals = engine.ResultStack.Pop().GetInteger();
-                    var name = NativeContract.ContractManagement.GetContract(_neoSystem.StoreView, key).Manifest.Name;
+                    var name = _neoSystem.NativeContractRepository.ContractManagement.GetContract(_neoSystem.StoreView, key).Manifest.Name;
 
                     balances.Add(new JObject
                     {
@@ -286,7 +286,7 @@ namespace Neo.Plugins.Trackers.NEP_11
             sb.EmitDynamicCall(nep11Hash, "properties", CallFlags.ReadOnly, tokenId);
             using var snapshot = _neoSystem.GetSnapshotCache();
 
-            using var engine = ApplicationEngine.Run(sb.ToArray(), snapshot, settings: _neoSystem.Settings);
+            using var engine = ApplicationEngine.Run(sb.ToArray(), snapshot, _neoSystem.NativeContractRepository, settings: _neoSystem.Settings);
             JObject json = new();
 
             if (engine.State == VMState.HALT)

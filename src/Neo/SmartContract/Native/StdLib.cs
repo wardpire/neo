@@ -27,7 +27,7 @@ namespace Neo.SmartContract.Native
     {
         private const int MaxInputLength = 1024;
 
-        internal StdLib() : base() { }
+        internal StdLib(NativeContractRepository nativeContractRepository) : base(nativeContractRepository) { }
 
         [ContractMethod(CpuFee = 1 << 12)]
         private static byte[] Serialize(ApplicationEngine engine, StackItem item)

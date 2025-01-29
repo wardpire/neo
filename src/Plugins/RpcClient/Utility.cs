@@ -47,9 +47,9 @@ namespace Neo.Network.RPC
                 addressOrScriptHash.ToScriptHash(protocolSettings.AddressVersion) : UInt160.Parse(addressOrScriptHash);
         }
 
-        public static string AsScriptHash(this string addressOrScriptHash)
+        public static string AsScriptHash(this string addressOrScriptHash, NativeContractRepository nativeContractRepository)
         {
-            foreach (var native in NativeContract.Contracts)
+            foreach (var native in nativeContractRepository.Contracts)
             {
                 if (addressOrScriptHash.Equals(native.Name, StringComparison.InvariantCultureIgnoreCase) ||
                     addressOrScriptHash == native.Id.ToString())

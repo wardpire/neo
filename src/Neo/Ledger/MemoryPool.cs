@@ -305,7 +305,7 @@ namespace Neo.Ledger
             try
             {
                 if (!CheckConflicts(tx, out List<PoolItem> conflictsToBeRemoved)) return VerifyResult.HasConflicts;
-                VerifyResult result = tx.VerifyStateDependent(_system.Settings, snapshot, VerificationContext, conflictsToBeRemoved.Select(c => c.Tx));
+                VerifyResult result = tx.VerifyStateDependent(_system.Settings, snapshot, VerificationContext, _system.NativeContractRepository, conflictsToBeRemoved.Select(c => c.Tx));
                 if (result != VerifyResult.Succeed) return result;
 
                 _unsortedTransactions.Add(tx.Hash, poolItem);
@@ -571,7 +571,7 @@ namespace Neo.Ledger
                 foreach (PoolItem item in unverifiedSortedTxPool.Reverse().Take(count))
                 {
                     if (CheckConflicts(item.Tx, out List<PoolItem> conflictsToBeRemoved) &&
-                        item.Tx.VerifyStateDependent(_system.Settings, snapshot, VerificationContext, conflictsToBeRemoved.Select(c => c.Tx)) == VerifyResult.Succeed)
+                        item.Tx.VerifyStateDependent(_system.Settings, snapshot, VerificationContext, _system.NativeContractRepository, conflictsToBeRemoved.Select(c => c.Tx)) == VerifyResult.Succeed)
                     {
                         reverifiedItems.Add(item);
                         if (_unsortedTransactions.TryAdd(item.Tx.Hash, item))

@@ -189,10 +189,10 @@ namespace Neo.Network.P2P.Payloads
             return Hash.GetHashCode();
         }
 
-        UInt160[] IVerifiable.GetScriptHashesForVerifying(DataCache snapshot)
+        UInt160[] IVerifiable.GetScriptHashesForVerifying(DataCache snapshot, NativeContractRepository nativeContractRepository)
         {
             if (prevHash == UInt256.Zero) return new[] { Witness.ScriptHash };
-            TrimmedBlock prev = NativeContract.Ledger.GetTrimmedBlock(snapshot, prevHash);
+            TrimmedBlock prev = nativeContractRepository.Ledger.GetTrimmedBlock(snapshot, prevHash);
             if (prev is null) throw new InvalidOperationException();
             return new[] { prev.Header.nextConsensus };
         }
@@ -237,29 +237,29 @@ namespace Neo.Network.P2P.Payloads
             return json;
         }
 
-        internal bool Verify(ProtocolSettings settings, DataCache snapshot)
+        internal bool Verify(ProtocolSettings settings, DataCache snapshot, NativeContractRepository nativeContractRepository)
         {
             if (primaryIndex >= settings.ValidatorsCount)
                 return false;
-            TrimmedBlock prev = NativeContract.Ledger.GetTrimmedBlock(snapshot, prevHash);
+            TrimmedBlock prev = nativeContractRepository.Ledger.GetTrimmedBlock(snapshot, prevHash);
             if (prev is null) return false;
             if (prev.Index + 1 != index) return false;
             if (prev.Hash != prevHash) return false;
             if (prev.Header.timestamp >= timestamp) return false;
-            if (!this.VerifyWitnesses(settings, snapshot, 3_00000000L)) return false;
+            if (!this.VerifyWitnesses(settings, nativeContractRepository, snapshot, 3_00000000L)) return false;
             return true;
         }
 
-        internal bool Verify(ProtocolSettings settings, DataCache snapshot, HeaderCache headerCache)
+        internal bool Verify(ProtocolSettings settings, DataCache snapshot, HeaderCache headerCache, NativeContractRepository nativeContractRepository)
         {
             Header prev = headerCache.Last;
-            if (prev is null) return Verify(settings, snapshot);
+            if (prev is null) return Verify(settings, snapshot, nativeContractRepository);
             if (primaryIndex >= settings.ValidatorsCount)
                 return false;
             if (prev.Hash != prevHash) return false;
             if (prev.index + 1 != index) return false;
             if (prev.timestamp >= timestamp) return false;
-            return this.VerifyWitness(settings, snapshot, prev.nextConsensus, Witness, 3_00000000L, out _);
+            return this.VerifyWitness(settings, nativeContractRepository, snapshot, prev.nextConsensus, Witness, 3_00000000L, out _);
         }
     }
 }

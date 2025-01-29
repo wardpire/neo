@@ -60,7 +60,7 @@ namespace Neo.SmartContract.Native
            "from", ContractParameterType.Hash160,
            "to", ContractParameterType.Hash160,
            "amount", ContractParameterType.Integer)]
-        protected FungibleToken() : base()
+        protected FungibleToken(NativeContractRepository nativeContractRepository) : base(nativeContractRepository)
         {
             Factor = BigInteger.Pow(10, Decimals);
         }
@@ -186,7 +186,7 @@ namespace Neo.SmartContract.Native
 
             // Check if it's a wallet or smart contract
 
-            if (!callOnPayment || to is null || ContractManagement.GetContract(engine.SnapshotCache, to) is null) return;
+            if (!callOnPayment || to is null || _repository.ContractManagement.GetContract(engine.SnapshotCache, to) is null) return;
 
             // Call onNEP17Payment method
 

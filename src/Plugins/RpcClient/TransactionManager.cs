@@ -30,6 +30,7 @@ namespace Neo.Network.RPC
         private class SignItem { public Contract Contract; public HashSet<KeyPair> KeyPairs; }
 
         private readonly RpcClient rpcClient;
+        private readonly NativeContractRepository _nativeContractRepository;
 
         /// <summary>
         /// The Transaction context to manage the witnesses
@@ -56,7 +57,7 @@ namespace Neo.Network.RPC
         public TransactionManager(Transaction tx, RpcClient rpcClient)
         {
             this.tx = tx;
-            context = new ContractParametersContext(null, tx, rpcClient.protocolSettings.Network);
+            context = new ContractParametersContext(null, tx, rpcClient.protocolSettings.Network, rpcClient.NativeContractRepository);
             this.rpcClient = rpcClient;
         }
 
@@ -121,7 +122,7 @@ namespace Neo.Network.RPC
 
         private void AddSignItem(Contract contract, KeyPair key)
         {
-            if (!Tx.GetScriptHashesForVerifying(null).Contains(contract.ScriptHash))
+            if (!Tx.GetScriptHashesForVerifying(null, _nativeContractRepository).Contains(contract.ScriptHash))
             {
                 throw new Exception($"Add SignItem error: Mismatch ScriptHash ({contract.ScriptHash})");
             }
@@ -168,7 +169,7 @@ namespace Neo.Network.RPC
         public async Task<Transaction> SignAsync()
         {
             // Calculate NetworkFee
-            Tx.Witnesses = Tx.GetScriptHashesForVerifying(null).Select(u => new Witness()
+            Tx.Witnesses = Tx.GetScriptHashesForVerifying(null, _nativeContractRepository).Select(u => new Witness()
             {
                 InvocationScript = Array.Empty<byte>(),
                 VerificationScript = GetVerificationScript(u)
@@ -176,7 +177,7 @@ namespace Neo.Network.RPC
             Tx.NetworkFee = await rpcClient.CalculateNetworkFeeAsync(Tx).ConfigureAwait(false);
             Tx.Witnesses = null;
 
-            var gasBalance = await new Nep17API(rpcClient).BalanceOfAsync(NativeContract.GAS.Hash, Tx.Sender).ConfigureAwait(false);
+            var gasBalance = await new Nep17API(rpcClient).BalanceOfAsync(_nativeContractRepository.GAS.Hash, Tx.Sender).ConfigureAwait(false);
             if (gasBalance < Tx.SystemFee + Tx.NetworkFee)
                 throw new InvalidOperationException($"Insufficient GAS in address: {Tx.Sender.ToAddress(rpcClient.protocolSettings.AddressVersion)}");
 

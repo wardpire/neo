@@ -102,8 +102,8 @@ namespace Neo.CLI
         {
             switch (input.ToLowerInvariant())
             {
-                case "neo": return NativeContract.NEO.Hash;
-                case "gas": return NativeContract.GAS.Hash;
+                case "neo": return NeoSystem.NativeContractRepository.NEO.Hash;
+                case "gas": return NeoSystem.NativeContractRepository.GAS.Hash;
             }
 
             if (input.IndexOf('.') > 0 && input.LastIndexOf('.') < input.Length)
@@ -143,7 +143,7 @@ namespace Neo.CLI
 
         public void CreateWallet(string path, string password, bool createDefaultAccount = true)
         {
-            Wallet wallet = Wallet.Create(null, path, password, NeoSystem.Settings);
+            Wallet wallet = Wallet.Create(null, path, password, NeoSystem.Settings, NeoSystem.NativeContractRepository);
             if (wallet == null)
             {
                 ConsoleHelper.Warning("Wallet files in that format are not supported, please use a .json or .db3 file extension.");
@@ -166,7 +166,7 @@ namespace Neo.CLI
             uint start = read_start ? r.ReadUInt32() : 0;
             uint count = r.ReadUInt32();
             uint end = start + count - 1;
-            uint currentHeight = NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView);
+            uint currentHeight = NeoSystem.NativeContractRepository.Ledger.CurrentIndex(NeoSystem.StoreView);
             if (end <= currentHeight) yield break;
             for (uint height = start; height <= end; height++)
             {
@@ -211,7 +211,7 @@ namespace Neo.CLI
                 IsCompressed = p.EndsWith(".zip")
             }).OrderBy(p => p.Start);
 
-            uint height = NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView);
+            uint height = NeoSystem.NativeContractRepository.Ledger.CurrentIndex(NeoSystem.StoreView);
             foreach (var path in paths)
             {
                 if (path.Start > height + 1) break;
@@ -286,9 +286,9 @@ namespace Neo.CLI
             using (ScriptBuilder sb = new ScriptBuilder())
             {
                 if (dataParameter is not null)
-                    sb.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString(), dataParameter);
+                    sb.EmitDynamicCall(NeoSystem.NativeContractRepository.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString(), dataParameter);
                 else
-                    sb.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString());
+                    sb.EmitDynamicCall(NeoSystem.NativeContractRepository.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString());
                 return sb.ToArray();
             }
         }
@@ -358,14 +358,14 @@ namespace Neo.CLI
             Stop();
         }
 
-        public void OpenWallet(string path, string password)
+        public void OpenWallet(string path, string password, NativeContractRepository nativeContractRepository)
         {
             if (!File.Exists(path))
             {
                 throw new FileNotFoundException();
             }
 
-            CurrentWallet = Wallet.Open(path, password, NeoSystem.Settings) ?? throw new NotSupportedException();
+            CurrentWallet = Wallet.Open(path, password, NeoSystem.Settings, nativeContractRepository) ?? throw new NotSupportedException();
         }
 
         public async void Start(CommandLineOptions options)
@@ -381,7 +381,7 @@ namespace Neo.CLI
             {
                 PluginRepository = new PluginRepository();
                 PluginRepository.FindAndLoadPlugins();
-                NeoSystem = new NeoSystem(protocol,PluginRepository, Settings.Default.Storage.Engine,
+                NeoSystem = new NeoSystem(protocol, PluginRepository, null, Settings.Default.Storage.Engine,
                     string.Format(Settings.Default.Storage.Path, protocol.Network.ToString("X8")));
             }
             catch (DllNotFoundException ex) when (ex.Message.Contains("libleveldb"))
@@ -480,7 +480,7 @@ namespace Neo.CLI
                         throw new InvalidOperationException("UnlockWallet.Password must be defined");
                     }
 
-                    OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
+                    OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password, NeoSystem.NativeContractRepository);
                 }
                 catch (FileNotFoundException)
                 {
@@ -551,7 +551,7 @@ namespace Neo.CLI
             {
                 for (uint i = start; i <= end; i++)
                 {
-                    Block block = NativeContract.Ledger.GetBlock(NeoSystem.StoreView, i);
+                    Block block = NeoSystem.NativeContractRepository.Ledger.GetBlock(NeoSystem.StoreView, i);
                     byte[] array = block.ToArray();
                     fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
                     fs.Write(array, 0, array.Length);
@@ -584,7 +584,7 @@ namespace Neo.CLI
             if (account != null)
             {
                 signers = CurrentWallet!.GetAccounts()
-                .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
+                .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NeoSystem.NativeContractRepository.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
                 .Select(p => new Signer { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
                 .ToArray();
             }
@@ -594,7 +594,7 @@ namespace Neo.CLI
                 Transaction tx = CurrentWallet!.MakeTransaction(snapshot, script, account, signers, maxGas: datoshi);
                 ConsoleHelper.Info("Invoking script with: ", $"'{Convert.ToBase64String(tx.Script.Span)}'");
 
-                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: NeoSystem.Settings, gas: datoshi))
+                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, snapshot, NeoSystem.NativeContractRepository, container: tx, settings: NeoSystem.Settings, gas: datoshi))
                 {
                     PrintExecutionOutput(engine, true);
                     if (engine.State == VMState.FAULT) return;
@@ -639,7 +639,7 @@ namespace Neo.CLI
                 }
             }
 
-            ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, scriptHash);
+            ContractState contract = NeoSystem.NativeContractRepository.ContractManagement.GetContract(NeoSystem.StoreView, scriptHash);
             if (contract == null)
             {
                 ConsoleHelper.Error("Contract does not exist.");
@@ -670,7 +670,7 @@ namespace Neo.CLI
                 tx.Script = script;
             }
 
-            using ApplicationEngine engine = ApplicationEngine.Run(script, NeoSystem.StoreView, container: verifiable, settings: NeoSystem.Settings, gas: datoshi);
+            using ApplicationEngine engine = ApplicationEngine.Run(script, NeoSystem.StoreView, NeoSystem.NativeContractRepository, container: verifiable, settings: NeoSystem.Settings, gas: datoshi);
             PrintExecutionOutput(engine, showStack);
             result = engine.State == VMState.FAULT ? StackItem.Null : engine.ResultStack.Peek();
             return engine.State != VMState.FAULT;
@@ -679,7 +679,7 @@ namespace Neo.CLI
         private void PrintExecutionOutput(ApplicationEngine engine, bool showStack = true)
         {
             ConsoleHelper.Info("VM State: ", engine.State.ToString());
-            ConsoleHelper.Info("Gas Consumed: ", new BigDecimal((BigInteger)engine.FeeConsumed, NativeContract.GAS.Decimals).ToString());
+            ConsoleHelper.Info("Gas Consumed: ", new BigDecimal((BigInteger)engine.FeeConsumed, NeoSystem.NativeContractRepository.GAS.Decimals).ToString());
 
             if (showStack)
                 ConsoleHelper.Info("Result Stack: ", new JArray(engine.ResultStack.Select(p => p.ToJson())).ToString());
@@ -708,7 +708,7 @@ namespace Neo.CLI
             using var sb = new ScriptBuilder();
             sb.EmitDynamicCall(Settings.Default.Contracts.NeoNameService, "resolve", CallFlags.ReadOnly, domain, 16);
 
-            using var appEng = ApplicationEngine.Run(sb.ToArray(), NeoSystem.StoreView, settings: NeoSystem.Settings);
+            using var appEng = ApplicationEngine.Run(sb.ToArray(), NeoSystem.StoreView, NeoSystem.NativeContractRepository, settings: NeoSystem.Settings);
             if (appEng.State == VMState.HALT)
             {
                 var data = appEng.ResultStack.Pop();

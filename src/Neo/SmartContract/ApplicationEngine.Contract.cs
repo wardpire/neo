@@ -76,7 +76,7 @@ namespace Neo.SmartContract
             if ((callFlags & ~CallFlags.All) != 0)
                 throw new ArgumentOutOfRangeException(nameof(callFlags));
 
-            ContractState contract = NativeContract.ContractManagement.GetContract(SnapshotCache, contractHash);
+            ContractState contract = NativeContractRepository.ContractManagement.GetContract(SnapshotCache, contractHash);
             if (contract is null) throw new InvalidOperationException($"Called Contract Does Not Exist: {contractHash}.{method}");
             ContractMethodDescriptor md = contract.Manifest.Abi.GetMethod(method, args.Count);
             if (md is null) throw new InvalidOperationException($"Method \"{method}\" with {args.Count} parameter(s) doesn't exist in the contract {contractHash}.");
@@ -93,10 +93,10 @@ namespace Neo.SmartContract
         /// <param name="version">The version of the native contract to be called.</param>
         protected internal void CallNativeContract(byte version)
         {
-            NativeContract contract = NativeContract.GetContract(CurrentScriptHash);
+            NativeContract contract = NativeContractRepository.GetContract(CurrentScriptHash);
             if (contract is null)
                 throw new InvalidOperationException("It is not allowed to use \"System.Contract.CallNative\" directly.");
-            if (!contract.IsActive(ProtocolSettings, NativeContract.Ledger.CurrentIndex(SnapshotCache)))
+            if (!contract.IsActive(ProtocolSettings, NativeContractRepository.Ledger.CurrentIndex(SnapshotCache)))
                 throw new InvalidOperationException($"The native contract {contract.Name} is not active.");
             contract.Invoke(this, version);
         }
@@ -155,7 +155,7 @@ namespace Neo.SmartContract
             {
                 if (Trigger != TriggerType.OnPersist)
                     throw new InvalidOperationException();
-                foreach (NativeContract contract in NativeContract.Contracts)
+                foreach (NativeContract contract in NativeContractRepository.Contracts)
                 {
                     if (contract.IsActive(ProtocolSettings, PersistingBlock.Index))
                         await contract.OnPersistAsync(this);
@@ -177,7 +177,7 @@ namespace Neo.SmartContract
             {
                 if (Trigger != TriggerType.PostPersist)
                     throw new InvalidOperationException();
-                foreach (NativeContract contract in NativeContract.Contracts)
+                foreach (NativeContract contract in NativeContractRepository.Contracts)
                 {
                     if (contract.IsActive(ProtocolSettings, PersistingBlock.Index))
                         await contract.PostPersistAsync(this);

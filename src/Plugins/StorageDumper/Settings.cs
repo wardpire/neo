@@ -32,7 +32,7 @@ namespace Neo.Plugins.StorageDumper
 
         public static Settings? Default { get; private set; }
 
-        private Settings(IConfigurationSection section) : base(section)
+        private Settings(IConfigurationSection section, NativeContractRepository nativeContractRepository) : base(section)
         {
             // Geting settings for storage changes state dumper
             BlockCacheSize = section.GetValue("BlockCacheSize", 1000u);
@@ -40,12 +40,12 @@ namespace Neo.Plugins.StorageDumper
             StoragePerFolder = section.GetValue("StoragePerFolder", 100000u);
             Exclude = section.GetSection("Exclude").Exists()
                 ? section.GetSection("Exclude").GetChildren().Select(p => int.Parse(p.Value!)).ToArray()
-                : new[] { NativeContract.Ledger.Id };
+                : new[] { nativeContractRepository.Ledger.Id };
         }
 
-        public static void Load(IConfigurationSection section)
+        public static void Load(IConfigurationSection section, NativeContractRepository nativeContractRepository)
         {
-            Default = new Settings(section);
+            Default = new Settings(section, nativeContractRepository);
         }
     }
 }

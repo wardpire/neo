@@ -32,7 +32,7 @@ namespace Neo.UnitTests.SmartContract
         public void TestNotify()
         {
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
-            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, settings: TestBlockchain.TheNeoSystem.Settings);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings);
             engine.LoadScript(System.Array.Empty<byte>());
             ApplicationEngine.Notify += Test_Notify1;
             const string notifyEvent = "TestEvent";
@@ -69,7 +69,7 @@ namespace Neo.UnitTests.SmartContract
         {
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             byte[] SyscallSystemRuntimeCheckWitnessHash = new byte[] { 0x68, 0xf8, 0x27, 0xec, 0x8c };
-            ApplicationEngine engine = ApplicationEngine.Run(SyscallSystemRuntimeCheckWitnessHash, snapshotCache, settings: TestProtocolSettings.Default);
+            ApplicationEngine engine = ApplicationEngine.Run(SyscallSystemRuntimeCheckWitnessHash, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestProtocolSettings.Default);
             engine.PersistingBlock.Version.Should().Be(0);
             engine.PersistingBlock.PrevHash.Should().Be(TestBlockchain.TheNeoSystem.GenesisBlock.Hash);
             engine.PersistingBlock.MerkleRoot.Should().Be(new UInt256());
@@ -124,7 +124,7 @@ namespace Neo.UnitTests.SmartContract
                 // Mock contract and put it to the Managemant's storage.
                 scriptHash = script.ToArray().ToScriptHash();
 
-                snapshotCache.DeleteContract(scriptHash);
+                snapshotCache.DeleteContract(scriptHash, TestBlockchain.TheNeoSystem.NativeContractRepository);
                 var contract = TestUtils.GetContract(script.ToArray(), TestUtils.CreateManifest("test", ContractParameterType.Any));
                 contract.Manifest.Abi.Methods = new[]
                 {
@@ -139,11 +139,11 @@ namespace Neo.UnitTests.SmartContract
                         Parameters = new ContractParameterDefinition[]{}
                     }
                 };
-                snapshotCache.AddContract(scriptHash, contract);
+                snapshotCache.AddContract(scriptHash, contract, TestBlockchain.TheNeoSystem.NativeContractRepository);
             }
 
             // Disallowed method call.
-            using (var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, null, ProtocolSettings.Default))
+            using (var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, null, ProtocolSettings.Default))
             using (var script = new ScriptBuilder())
             {
                 // Build call script calling disallowed method.
@@ -180,7 +180,7 @@ namespace Neo.UnitTests.SmartContract
             }
 
             // Allowed method call.
-            using (var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, null, ProtocolSettings.Default))
+            using (var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository, null, ProtocolSettings.Default))
             using (var script = new ScriptBuilder())
             {
                 // Build call script.

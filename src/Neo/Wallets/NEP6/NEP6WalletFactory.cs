@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.SmartContract.Native;
 using System;
 using System.IO;
 
@@ -23,18 +24,18 @@ namespace Neo.Wallets.NEP6
             return Path.GetExtension(path).ToLowerInvariant() == ".json";
         }
 
-        public Wallet CreateWallet(string name, string path, string password, ProtocolSettings settings)
+        public Wallet CreateWallet(string name, string path, string password, ProtocolSettings settings, NativeContractRepository nativeContractRepository)
         {
             if (File.Exists(path))
                 throw new InvalidOperationException("The wallet file already exists.");
-            NEP6Wallet wallet = new NEP6Wallet(path, password, settings, name);
+            NEP6Wallet wallet = new NEP6Wallet(path, password, settings, nativeContractRepository, name);
             wallet.Save();
             return wallet;
         }
 
-        public Wallet OpenWallet(string path, string password, ProtocolSettings settings)
+        public Wallet OpenWallet(string path, string password, ProtocolSettings settings, NativeContractRepository nativeContractRepository)
         {
-            return new NEP6Wallet(path, password, settings);
+            return new NEP6Wallet(path, password, settings, nativeContractRepository);
         }
     }
 }

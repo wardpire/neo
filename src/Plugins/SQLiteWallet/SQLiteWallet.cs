@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Neo.Cryptography;
 using Neo.Extensions;
 using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using Neo.Wallets.NEP6;
 using System.Buffers.Binary;
 using System.Reflection;
@@ -50,7 +51,7 @@ namespace Neo.Wallets.SQLite
             }
         }
 
-        private SQLiteWallet(string path, byte[] passwordKey, ProtocolSettings settings) : base(path, settings)
+        private SQLiteWallet(string path, byte[] passwordKey, ProtocolSettings settings, NativeContractRepository nativeContractRepository) : base(path, settings, nativeContractRepository)
         {
             salt = LoadStoredData("Salt");
             byte[] passwordHash = LoadStoredData("PasswordHash");
@@ -67,7 +68,7 @@ namespace Neo.Wallets.SQLite
             accounts = LoadAccounts();
         }
 
-        private SQLiteWallet(string path, byte[] passwordKey, ProtocolSettings settings, ScryptParameters scrypt) : base(path, settings)
+        private SQLiteWallet(string path, byte[] passwordKey, ProtocolSettings settings, ScryptParameters scrypt, NativeContractRepository nativeContractRepository) : base(path, settings, nativeContractRepository)
         {
             iv = new byte[16];
             salt = new byte[20];
@@ -200,9 +201,9 @@ namespace Neo.Wallets.SQLite
         /// <param name="settings">The <see cref="ProtocolSettings"/> to be used by the wallet.</param>
         /// <param name="scrypt">The parameters of the SCrypt algorithm used for encrypting and decrypting the private keys in the wallet.</param>
         /// <returns>The created wallet.</returns>
-        public static SQLiteWallet Create(string path, string password, ProtocolSettings settings, ScryptParameters scrypt = null)
+        public static SQLiteWallet Create(string path, string password, ProtocolSettings settings, NativeContractRepository nativeContractRepository, ScryptParameters scrypt = null)
         {
-            return new SQLiteWallet(path, ToAesKey(password), settings, scrypt ?? ScryptParameters.Default);
+            return new SQLiteWallet(path, ToAesKey(password), settings, scrypt ?? ScryptParameters.Default, nativeContractRepository);
         }
 
         public override WalletAccount CreateAccount(byte[] privateKey)
@@ -334,9 +335,9 @@ namespace Neo.Wallets.SQLite
         /// <param name="password">The password of the wallet.</param>
         /// <param name="settings">The <see cref="ProtocolSettings"/> to be used by the wallet.</param>
         /// <returns>The opened wallet.</returns>
-        public static new SQLiteWallet Open(string path, string password, ProtocolSettings settings)
+        public static new SQLiteWallet Open(string path, string password, ProtocolSettings settings, NativeContractRepository nativeContractRepository)
         {
-            return new SQLiteWallet(path, ToAesKey(password), settings);
+            return new SQLiteWallet(path, ToAesKey(password), settings, nativeContractRepository);
         }
 
         public override void Save()

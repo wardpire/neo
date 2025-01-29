@@ -68,7 +68,7 @@ namespace Neo.Plugins.DBFTPlugin.Consensus
         public bool IsPrimary => MyIndex == Block.PrimaryIndex;
         public bool IsBackup => MyIndex >= 0 && MyIndex != Block.PrimaryIndex;
         public bool WatchOnly => MyIndex < 0;
-        public Header PrevHeader => NativeContract.Ledger.GetHeader(Snapshot, Block.PrevHash);
+        public Header PrevHeader => neoSystem.NativeContractRepository.Ledger.GetHeader(Snapshot, Block.PrevHash);
         public int CountCommitted => CommitPayloads.Count(p => p != null);
         public int CountFailed
         {
@@ -82,10 +82,10 @@ namespace Neo.Plugins.DBFTPlugin.Consensus
         {
             get
             {
-                if (NativeContract.Ledger.CurrentIndex(Snapshot) == 0) return false;
-                UInt256 hash = NativeContract.Ledger.CurrentHash(Snapshot);
-                TrimmedBlock currentBlock = NativeContract.Ledger.GetTrimmedBlock(Snapshot, hash);
-                TrimmedBlock previousBlock = NativeContract.Ledger.GetTrimmedBlock(Snapshot, currentBlock.Header.PrevHash);
+                if (neoSystem.NativeContractRepository.Ledger.CurrentIndex(Snapshot) == 0) return false;
+                UInt256 hash = neoSystem.NativeContractRepository.Ledger.CurrentHash(Snapshot);
+                TrimmedBlock currentBlock = neoSystem.NativeContractRepository.Ledger.GetTrimmedBlock(Snapshot, hash);
+                TrimmedBlock previousBlock = neoSystem.NativeContractRepository.Ledger.GetTrimmedBlock(Snapshot, currentBlock.Header.PrevHash);
                 return currentBlock.Header.NextConsensus != previousBlock.Header.NextConsensus;
             }
         }
@@ -126,7 +126,7 @@ namespace Neo.Plugins.DBFTPlugin.Consensus
         {
             EnsureHeader();
             Contract contract = Contract.CreateMultiSigContract(M, Validators);
-            ContractParametersContext sc = new ContractParametersContext(neoSystem.StoreView, Block.Header, dbftSettings.Network);
+            ContractParametersContext sc = new ContractParametersContext(neoSystem.StoreView, Block.Header, dbftSettings.Network, neoSystem.NativeContractRepository);
             for (int i = 0, j = 0; i < Validators.Length && j < M; i++)
             {
                 if (GetMessage(CommitPayloads[i])?.ViewNumber != ViewNumber) continue;
@@ -197,21 +197,21 @@ namespace Neo.Plugins.DBFTPlugin.Consensus
             {
                 Snapshot?.Dispose();
                 Snapshot = neoSystem.GetSnapshotCache();
-                uint height = NativeContract.Ledger.CurrentIndex(Snapshot);
+                uint height = neoSystem.NativeContractRepository.Ledger.CurrentIndex(Snapshot);
                 Block = new Block
                 {
                     Header = new Header
                     {
-                        PrevHash = NativeContract.Ledger.CurrentHash(Snapshot),
+                        PrevHash = neoSystem.NativeContractRepository.Ledger.CurrentHash(Snapshot),
                         Index = height + 1,
                         NextConsensus = Contract.GetBFTAddress(
                             NeoToken.ShouldRefreshCommittee(height + 1, neoSystem.Settings.CommitteeMembersCount) ?
-                            NativeContract.NEO.ComputeNextBlockValidators(Snapshot, neoSystem.Settings) :
-                            NativeContract.NEO.GetNextBlockValidators(Snapshot, neoSystem.Settings.ValidatorsCount))
+                            neoSystem.NativeContractRepository.NEO.ComputeNextBlockValidators(Snapshot, neoSystem.Settings) :
+                            neoSystem.NativeContractRepository.NEO.GetNextBlockValidators(Snapshot, neoSystem.Settings.ValidatorsCount))
                     }
                 };
                 var pv = Validators;
-                Validators = NativeContract.NEO.GetNextBlockValidators(Snapshot, neoSystem.Settings.ValidatorsCount);
+                Validators = neoSystem.NativeContractRepository.NEO.GetNextBlockValidators(Snapshot, neoSystem.Settings.ValidatorsCount);
                 if (_witnessSize == 0 || (pv != null && pv.Length != Validators.Length))
                 {
                     // Compute the expected size of the witness

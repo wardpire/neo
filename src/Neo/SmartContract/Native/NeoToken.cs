@@ -70,7 +70,7 @@ namespace Neo.SmartContract.Native
         [ContractEvent(Hardfork.HF_Cockatrice, 3, name: "CommitteeChanged",
            "old", ContractParameterType.Array,
            "new", ContractParameterType.Array)]
-        public NeoToken() : base()
+        public NeoToken(NativeContractRepository nativeContractRepository) : base(nativeContractRepository)
         {
             TotalAmount = 100000000 * Factor;
             _votersCount = CreateStorageKey(Prefix_VotersCount);
@@ -104,7 +104,7 @@ namespace Neo.SmartContract.Native
             await base.PostTransferAsync(engine, from, to, amount, data, callOnPayment);
             var list = engine.CurrentContext.GetState<List<GasDistribution>>();
             foreach (var distribution in list)
-                await GAS.Mint(engine, distribution.Account, distribution.Amount, callOnPayment);
+                await _repository.GAS.Mint(engine, distribution.Account, distribution.Amount, callOnPayment);
         }
 
         private GasDistribution DistributeGas(ApplicationEngine engine, UInt160 account, NeoAccountState state)
@@ -134,7 +134,7 @@ namespace Neo.SmartContract.Native
             if (state.Balance.IsZero) return BigInteger.Zero;
             if (state.Balance.Sign < 0) throw new ArgumentOutOfRangeException(nameof(state.Balance));
 
-            var expectEnd = Ledger.CurrentIndex(snapshot) + 1;
+            var expectEnd = _repository.Ledger.CurrentIndex(snapshot) + 1;
             if (expectEnd != end) throw new ArgumentOutOfRangeException(nameof(end));
             if (state.BalanceHeight >= end) return BigInteger.Zero;
             // In the unit of datoshi, 1 datoshi = 1e-8 GAS
@@ -192,8 +192,8 @@ namespace Neo.SmartContract.Native
                 var cachedCommittee = new CachedCommittee(engine.ProtocolSettings.StandbyCommittee.Select(p => (p, BigInteger.Zero)));
                 engine.SnapshotCache.Add(CreateStorageKey(Prefix_Committee), new StorageItem(cachedCommittee));
                 engine.SnapshotCache.Add(_votersCount, new StorageItem(System.Array.Empty<byte>()));
-                engine.SnapshotCache.Add(CreateStorageKey(Prefix_GasPerBlock).AddBigEndian(0u), new StorageItem(5 * GAS.Factor));
-                engine.SnapshotCache.Add(_registerPrice, new StorageItem(1000 * GAS.Factor));
+                engine.SnapshotCache.Add(CreateStorageKey(Prefix_GasPerBlock).AddBigEndian(0u), new StorageItem(5 * _repository.GAS.Factor));
+                engine.SnapshotCache.Add(_registerPrice, new StorageItem(1000 * _repository.GAS.Factor));
                 return Mint(engine, Contract.GetBFTAddress(engine.ProtocolSettings.StandbyValidators), TotalAmount, false);
             }
             return ContractTask.CompletedTask;
@@ -214,7 +214,7 @@ namespace Neo.SmartContract.Native
 
                 // Hardfork check for https://github.com/neo-project/neo/pull/3158
                 // New notification will case 3.7.0 and 3.6.0 have different behavior
-                var index = engine.PersistingBlock?.Index ?? Ledger.CurrentIndex(engine.SnapshotCache);
+                var index = engine.PersistingBlock?.Index ?? _repository.Ledger.CurrentIndex(engine.SnapshotCache);
                 if (engine.ProtocolSettings.IsHardforkEnabled(Hardfork.HF_Cockatrice, index))
                 {
                     var newCommittee = cachedCommittee.Select(u => u.PublicKey).ToArray();
@@ -242,7 +242,7 @@ namespace Neo.SmartContract.Native
             var committee = GetCommitteeFromCache(engine.SnapshotCache);
             var pubkey = committee[index].PublicKey;
             var account = Contract.CreateSignatureRedeemScript(pubkey).ToScriptHash();
-            await GAS.Mint(engine, account, gasPerBlock * CommitteeRewardRatio / 100, false);
+            await _repository.GAS.Mint(engine, account, gasPerBlock * CommitteeRewardRatio / 100, false);
 
             // Record the cumulative reward of the voters of committee
 
@@ -267,9 +267,9 @@ namespace Neo.SmartContract.Native
         [ContractMethod(CpuFee = 1 << 15, RequiredCallFlags = CallFlags.States)]
         private void SetGasPerBlock(ApplicationEngine engine, BigInteger gasPerBlock)
         {
-            if (gasPerBlock < 0 || gasPerBlock > 10 * GAS.Factor)
+            if (gasPerBlock < 0 || gasPerBlock > 10 * _repository.GAS.Factor)
                 throw new ArgumentOutOfRangeException(nameof(gasPerBlock));
-            if (!CheckCommittee(engine)) throw new InvalidOperationException();
+            if (!_repository.CheckCommittee(engine)) throw new InvalidOperationException();
 
             uint index = engine.PersistingBlock.Index + 1;
             StorageItem entry = engine.SnapshotCache.GetAndChange(CreateStorageKey(Prefix_GasPerBlock).AddBigEndian(index), () => new StorageItem(gasPerBlock));
@@ -284,7 +284,7 @@ namespace Neo.SmartContract.Native
         [ContractMethod(CpuFee = 1 << 15, RequiredCallFlags = CallFlags.ReadStates)]
         public BigInteger GetGasPerBlock(DataCache snapshot)
         {
-            return GetSortedGasRecords(snapshot, Ledger.CurrentIndex(snapshot) + 1).First().GasPerBlock;
+            return GetSortedGasRecords(snapshot, _repository.Ledger.CurrentIndex(snapshot) + 1).First().GasPerBlock;
         }
 
         [ContractMethod(CpuFee = 1 << 15, RequiredCallFlags = CallFlags.States)]
@@ -292,7 +292,7 @@ namespace Neo.SmartContract.Native
         {
             if (registerPrice <= 0)
                 throw new ArgumentOutOfRangeException(nameof(registerPrice));
-            if (!CheckCommittee(engine)) throw new InvalidOperationException();
+            if (!_repository.CheckCommittee(engine)) throw new InvalidOperationException();
             engine.SnapshotCache.GetAndChange(_registerPrice).Set(registerPrice);
         }
 
@@ -417,7 +417,7 @@ namespace Neo.SmartContract.Native
             engine.SendNotification(Hash, "Vote",
                 new VM.Types.Array(engine.ReferenceCounter) { account.ToArray(), from?.ToArray() ?? StackItem.Null, voteTo?.ToArray() ?? StackItem.Null, state_account.Balance });
             if (gasDistribution is not null)
-                await GAS.Mint(engine, gasDistribution.Account, gasDistribution.Amount, true);
+                await _repository.GAS.Mint(engine, gasDistribution.Account, gasDistribution.Amount, true);
             return true;
         }
 
@@ -456,7 +456,7 @@ namespace Neo.SmartContract.Native
             return snapshot.Find(prefix_key)
                 .Select(p => (p.Key, p.Value, PublicKey: p.Key.Key[1..].AsSerializable<ECPoint>(), State: p.Value.GetInteroperable<CandidateState>()))
                 .Where(p => p.State.Registered)
-                .Where(p => !Policy.IsBlocked(snapshot, Contract.CreateSignatureRedeemScript(p.PublicKey).ToScriptHash()));
+                .Where(p => !_repository.Policy.IsBlocked(snapshot, Contract.CreateSignatureRedeemScript(p.PublicKey).ToScriptHash()));
         }
 
         /// <summary>

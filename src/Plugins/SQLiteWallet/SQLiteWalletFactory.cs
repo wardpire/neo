@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Neo.Plugins;
+using Neo.SmartContract.Native;
 using static System.IO.Path;
 
 namespace Neo.Wallets.SQLite
@@ -29,14 +30,14 @@ namespace Neo.Wallets.SQLite
             return GetExtension(path).ToLowerInvariant() == ".db3";
         }
 
-        public Wallet CreateWallet(string name, string path, string password, ProtocolSettings settings)
+        public Wallet CreateWallet(string name, string path, string password, ProtocolSettings settings, NativeContractRepository nativeContractRepository)
         {
-            return SQLiteWallet.Create(path, password, settings);
+            return SQLiteWallet.Create(path, password, settings, nativeContractRepository);
         }
 
-        public Wallet OpenWallet(string path, string password, ProtocolSettings settings)
+        public Wallet OpenWallet(string path, string password, ProtocolSettings settings, NativeContractRepository nativeContract)
         {
-            return SQLiteWallet.Open(path, password, settings);
+            return SQLiteWallet.Open(path, password, settings, nativeContract);
         }
     }
 }

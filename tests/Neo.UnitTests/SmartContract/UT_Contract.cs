@@ -167,7 +167,7 @@ namespace Neo.UnitTests.SmartContract
 
             var fee = PolicyContract.DefaultExecFeeFactor * (ApplicationEngine.OpCodePriceTable[(byte)OpCode.PUSHDATA1] * 2 + ApplicationEngine.OpCodePriceTable[(byte)OpCode.SYSCALL] + ApplicationEngine.CheckSigPrice);
 
-            using (ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Verification, new Transaction { Signers = Array.Empty<Signer>(), Attributes = Array.Empty<TransactionAttribute>() }, null, settings: TestBlockchain.TheNeoSystem.Settings))
+            using (ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Verification, new Transaction { Signers = Array.Empty<Signer>(), Attributes = Array.Empty<TransactionAttribute>() }, null, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings))
             {
                 engine.LoadScript(invocation.Concat(verification).ToArray(), configureState: p => p.CallFlags = CallFlags.None);
                 engine.Execute();
@@ -195,7 +195,7 @@ namespace Neo.UnitTests.SmartContract
 
             long fee = PolicyContract.DefaultExecFeeFactor * (ApplicationEngine.OpCodePriceTable[(byte)OpCode.PUSHDATA1] * (2 + 2) + ApplicationEngine.OpCodePriceTable[(byte)OpCode.PUSHINT8] * 2 + ApplicationEngine.OpCodePriceTable[(byte)OpCode.SYSCALL] + ApplicationEngine.CheckSigPrice * 2);
 
-            using (ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Verification, new Transaction { Signers = Array.Empty<Signer>(), Attributes = Array.Empty<TransactionAttribute>() }, null, settings: TestBlockchain.TheNeoSystem.Settings))
+            using (ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Verification, new Transaction { Signers = Array.Empty<Signer>(), Attributes = Array.Empty<TransactionAttribute>() }, null, TestBlockchain.TheNeoSystem.NativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings))
             {
                 engine.LoadScript(invocation.Concat(verification).ToArray(), configureState: p => p.CallFlags = CallFlags.None);
                 engine.Execute();

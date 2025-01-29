@@ -57,7 +57,7 @@ namespace Neo.Plugins.DBFTPlugin.Consensus
             ContractParametersContext sc;
             try
             {
-                sc = new ContractParametersContext(neoSystem.StoreView, payload, dbftSettings.Network);
+                sc = new ContractParametersContext(neoSystem.StoreView, payload, dbftSettings.Network, neoSystem.NativeContractRepository);
                 wallet.Sign(sc);
             }
             catch (InvalidOperationException exception)

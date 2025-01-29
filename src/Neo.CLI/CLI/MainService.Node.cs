@@ -69,7 +69,7 @@ namespace Neo.CLI
             {
                 while (!cancel.Token.IsCancellationRequested)
                 {
-                    NeoSystem.LocalNode.Tell(Message.Create(MessageCommand.Ping, PingPayload.Create(NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView))));
+                    NeoSystem.LocalNode.Tell(Message.Create(MessageCommand.Ping, PingPayload.Create(NeoSystem.NativeContractRepository.Ledger.CurrentIndex(NeoSystem.StoreView))));
                     await Task.Delay(NeoSystem.Settings.TimePerBlock, cancel.Token);
                 }
             });
@@ -78,7 +78,7 @@ namespace Neo.CLI
                 int maxLines = 0;
                 while (!cancel.Token.IsCancellationRequested)
                 {
-                    uint height = NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView);
+                    uint height = NeoSystem.NativeContractRepository.Ledger.CurrentIndex(NeoSystem.StoreView);
                     uint headerHeight = NeoSystem.HeaderCache.Last?.Index ?? height;
 
                     Console.SetCursorPosition(0, 0);

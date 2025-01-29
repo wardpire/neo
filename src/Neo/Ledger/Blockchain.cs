@@ -154,13 +154,13 @@ namespace Neo.Ledger
 
         private void OnImport(IEnumerable<Block> blocks, bool verify)
         {
-            uint currentHeight = NativeContract.Ledger.CurrentIndex(system.StoreView);
+            uint currentHeight = system.NativeContractRepository.Ledger.CurrentIndex(system.StoreView);
             foreach (Block block in blocks)
             {
                 if (block.Index <= currentHeight) continue;
                 if (block.Index != currentHeight + 1)
                     throw new InvalidOperationException();
-                if (verify && !block.Verify(system.Settings, system.StoreView))
+                if (verify && !block.Verify(system.Settings, system.StoreView, system.NativeContractRepository))
                     throw new InvalidOperationException();
                 Persist(block);
                 ++currentHeight;
@@ -207,9 +207,9 @@ namespace Neo.Ledger
             // Add the transactions to the memory pool
             foreach (var tx in transactions)
             {
-                if (NativeContract.Ledger.ContainsTransaction(snapshot, tx.Hash))
+                if (system.NativeContractRepository.Ledger.ContainsTransaction(snapshot, tx.Hash))
                     continue;
-                if (NativeContract.Ledger.ContainsConflictHash(snapshot, tx.Hash, tx.Signers.Select(s => s.Account), system.Settings.MaxTraceableBlocks))
+                if (system.NativeContractRepository.Ledger.ContainsConflictHash(snapshot, tx.Hash, tx.Signers.Select(s => s.Account), system.Settings.MaxTraceableBlocks))
                     continue;
                 // First remove the tx if it is unverified in the pool.
                 system.MemPool.TryRemoveUnVerified(tx.Hash, out _);
@@ -223,7 +223,7 @@ namespace Neo.Ledger
 
         private void OnInitialize()
         {
-            if (!NativeContract.Ledger.Initialized(system.StoreView))
+            if (!system.NativeContractRepository.Ledger.Initialized(system.StoreView))
                 Persist(system.GenesisBlock);
             Sender.Tell(new object());
         }
@@ -247,7 +247,7 @@ namespace Neo.Ledger
         private VerifyResult OnNewBlock(Block block)
         {
             DataCache snapshot = system.StoreView;
-            uint currentHeight = NativeContract.Ledger.CurrentIndex(snapshot);
+            uint currentHeight = system.NativeContractRepository.Ledger.CurrentIndex(snapshot);
             uint headerHeight = system.HeaderCache.Last?.Index ?? currentHeight;
             if (block.Index <= currentHeight)
                 return VerifyResult.AlreadyExists;
@@ -258,7 +258,7 @@ namespace Neo.Ledger
             }
             if (block.Index == headerHeight + 1)
             {
-                if (!block.Verify(system.Settings, snapshot, system.HeaderCache))
+                if (!block.Verify(system.Settings, snapshot, system.HeaderCache, system.NativeContractRepository))
                     return VerifyResult.Invalid;
             }
             else
@@ -317,12 +317,12 @@ namespace Neo.Ledger
             if (!system.HeaderCache.Full)
             {
                 DataCache snapshot = system.StoreView;
-                uint headerHeight = system.HeaderCache.Last?.Index ?? NativeContract.Ledger.CurrentIndex(snapshot);
+                uint headerHeight = system.HeaderCache.Last?.Index ?? system.NativeContractRepository.Ledger.CurrentIndex(snapshot);
                 foreach (Header header in headers)
                 {
                     if (header.Index > headerHeight + 1) break;
                     if (header.Index < headerHeight + 1) continue;
-                    if (!header.Verify(system.Settings, snapshot, system.HeaderCache)) break;
+                    if (!header.Verify(system.Settings, snapshot, system.HeaderCache, system.NativeContractRepository)) break;
                     system.HeaderCache.Add(header);
                     ++headerHeight;
                 }
@@ -333,8 +333,8 @@ namespace Neo.Ledger
         private VerifyResult OnNewExtensiblePayload(ExtensiblePayload payload)
         {
             DataCache snapshot = system.StoreView;
-            extensibleWitnessWhiteList ??= UpdateExtensibleWitnessWhiteList(system.Settings, snapshot);
-            if (!payload.Verify(system.Settings, snapshot, extensibleWitnessWhiteList)) return VerifyResult.Invalid;
+            extensibleWitnessWhiteList ??= UpdateExtensibleWitnessWhiteList(snapshot);
+            if (!payload.Verify(system.Settings, snapshot, extensibleWitnessWhiteList, system.NativeContractRepository)) return VerifyResult.Invalid;
             system.RelayCache.Add(payload);
             return VerifyResult.Succeed;
         }
@@ -423,7 +423,7 @@ namespace Neo.Ledger
             {
                 List<ApplicationExecuted> all_application_executed = new();
                 TransactionState[] transactionStates;
-                using (ApplicationEngine engine = ApplicationEngine.Create(TriggerType.OnPersist, null, snapshot, block, system.Settings, 0))
+                using (ApplicationEngine engine = ApplicationEngine.Create(TriggerType.OnPersist, null, snapshot, system.NativeContractRepository, block, system.Settings, 0))
                 {
                     engine.LoadScript(onPersistScript);
                     if (engine.Execute() != VMState.HALT)
@@ -442,7 +442,7 @@ namespace Neo.Ledger
                 foreach (TransactionState transactionState in transactionStates)
                 {
                     Transaction tx = transactionState.Transaction;
-                    using ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, tx, clonedSnapshot, block, system.Settings, tx.SystemFee);
+                    using ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, tx, clonedSnapshot, system.NativeContractRepository, block, system.Settings, tx.SystemFee);
                     engine.LoadScript(tx.Script);
                     transactionState.State = engine.Execute();
                     if (transactionState.State == VMState.HALT)
@@ -457,7 +457,7 @@ namespace Neo.Ledger
                     Context.System.EventStream.Publish(application_executed);
                     all_application_executed.Add(application_executed);
                 }
-                using (ApplicationEngine engine = ApplicationEngine.Create(TriggerType.PostPersist, null, snapshot, block, system.Settings, 0))
+                using (ApplicationEngine engine = ApplicationEngine.Create(TriggerType.PostPersist, null, snapshot, system.NativeContractRepository, block, system.Settings, 0))
                 {
                     engine.LoadScript(postPersistScript);
                     if (engine.Execute() != VMState.HALT)
@@ -553,15 +553,15 @@ namespace Neo.Ledger
             Context.System.EventStream.Publish(rr);
         }
 
-        private static ImmutableHashSet<UInt160> UpdateExtensibleWitnessWhiteList(ProtocolSettings settings, DataCache snapshot)
+        private ImmutableHashSet<UInt160> UpdateExtensibleWitnessWhiteList(DataCache snapshot)
         {
-            uint currentHeight = NativeContract.Ledger.CurrentIndex(snapshot);
+            uint currentHeight = system.NativeContractRepository.Ledger.CurrentIndex(snapshot);
             var builder = ImmutableHashSet.CreateBuilder<UInt160>();
-            builder.Add(NativeContract.NEO.GetCommitteeAddress(snapshot));
-            var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, settings.ValidatorsCount);
+            builder.Add(system.NativeContractRepository.NEO.GetCommitteeAddress(snapshot));
+            var validators = system.NativeContractRepository.NEO.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount);
             builder.Add(Contract.GetBFTAddress(validators));
             builder.UnionWith(validators.Select(u => Contract.CreateSignatureRedeemScript(u).ToScriptHash()));
-            var stateValidators = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.StateValidator, currentHeight);
+            var stateValidators = system.NativeContractRepository.RoleManagement.GetDesignatedByRole(snapshot, Role.StateValidator, currentHeight);
             if (stateValidators.Length > 0)
             {
                 builder.Add(Contract.GetBFTAddress(stateValidators));

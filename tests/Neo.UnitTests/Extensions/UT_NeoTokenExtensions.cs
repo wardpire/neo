@@ -43,7 +43,7 @@ namespace Neo.UnitTests.Extensions
         {
             UInt160 expected = "0x9f8f056a53e39585c7bb52886418c7bed83d126b";
 
-            var accounts = NativeContract.NEO.GetAccounts(system.StoreView);
+            var accounts = TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.GetAccounts(system.StoreView);
             var actual = accounts.FirstOrDefault();
 
             Assert.AreEqual(expected, actual.Address);

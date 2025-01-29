@@ -45,7 +45,7 @@ namespace Neo.Plugins.OracleService.Tests
             byte[] script;
             using (ScriptBuilder sb = new())
             {
-                sb.EmitDynamicCall(NativeContract.RoleManagement.Hash, "designateAsRole",
+                sb.EmitDynamicCall(s_theNeoSystem.NativeContractRepository.RoleManagement.Hash, "designateAsRole",
                     [Role.Oracle,
                         new ContractParameter()
                         {
@@ -62,7 +62,7 @@ namespace Neo.Plugins.OracleService.Tests
                 new Transaction
                 {
                     Nonce = 233,
-                    ValidUntilBlock = NativeContract.Ledger.CurrentIndex(s_theNeoSystem.GetSnapshotCache()) + s_theNeoSystem.Settings.MaxValidUntilBlockIncrement,
+                    ValidUntilBlock = s_theNeoSystem.NativeContractRepository.Ledger.CurrentIndex(s_theNeoSystem.GetSnapshotCache()) + s_theNeoSystem.Settings.MaxValidUntilBlockIncrement,
                     Signers = [new Signer() { Account = MultisigScriptHash, Scopes = WitnessScope.CalledByEntry }],
                     Attributes = Array.Empty<TransactionAttribute>(),
                     Script = script,

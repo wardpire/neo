@@ -53,7 +53,7 @@ namespace Neo.CLI
             }
             try
             {
-                OpenWallet(path, password);
+                OpenWallet(path, password, NeoSystem.NativeContractRepository);
             }
             catch (System.Security.Cryptography.CryptographicException)
             {
@@ -100,7 +100,7 @@ namespace Neo.CLI
                 ConsoleHelper.Warning($"File '{pathNew}' already exists");
                 return;
             }
-            NEP6Wallet.Migrate(pathNew, path, password, NeoSystem.Settings).Save();
+            NEP6Wallet.Migrate(pathNew, path, password, NeoSystem.Settings, NeoSystem.NativeContractRepository).Save();
             Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {pathNew}");
         }
 
@@ -404,7 +404,7 @@ namespace Neo.CLI
                 {
                     type = "Standard";
                 }
-                else if (NativeContract.ContractManagement.GetContract(snapshot, account.ScriptHash) != null)
+                else if (NeoSystem.NativeContractRepository.ContractManagement.GetContract(snapshot, account.ScriptHash) != null)
                 {
                     type = "Deployed-Nonstandard";
                 }
@@ -425,15 +425,15 @@ namespace Neo.CLI
             foreach (UInt160 account in CurrentWallet!.GetAccounts().Select(p => p.ScriptHash))
             {
                 Console.WriteLine(account.ToAddress(NeoSystem.Settings.AddressVersion));
-                ConsoleHelper.Info("NEO: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.NEO.Hash, account)}");
-                ConsoleHelper.Info("GAS: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.GAS.Hash, account)}");
+                ConsoleHelper.Info("NEO: ", $"{CurrentWallet.GetBalance(snapshot, NeoSystem.NativeContractRepository.NEO.Hash, account)}");
+                ConsoleHelper.Info("GAS: ", $"{CurrentWallet.GetBalance(snapshot, NeoSystem.NativeContractRepository.GAS.Hash, account)}");
                 Console.WriteLine();
             }
             Console.WriteLine("----------------------------------------------------");
-            ConsoleHelper.Info("Total:   NEO: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.NEO.Hash),10}     ", "GAS: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.GAS.Hash),18}");
+            ConsoleHelper.Info("Total:   NEO: ", $"{CurrentWallet.GetAvailable(snapshot, NeoSystem.NativeContractRepository.NEO.Hash),10}     ", "GAS: ", $"{CurrentWallet.GetAvailable(snapshot, NeoSystem.NativeContractRepository.GAS.Hash),18}");
             Console.WriteLine();
-            ConsoleHelper.Info("NEO hash: ", NativeContract.NEO.Hash.ToString());
-            ConsoleHelper.Info("GAS hash: ", NativeContract.GAS.Hash.ToString());
+            ConsoleHelper.Info("NEO hash: ", NeoSystem.NativeContractRepository.NEO.Hash.ToString());
+            ConsoleHelper.Info("GAS hash: ", NeoSystem.NativeContractRepository.GAS.Hash.ToString());
         }
 
         /// <summary>
@@ -469,7 +469,7 @@ namespace Neo.CLI
             try
             {
                 var snapshot = NeoSystem.StoreView;
-                ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToSign.ToString(), snapshot);
+                ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToSign.ToString(), snapshot, NeoSystem.NativeContractRepository);
                 if (context.Network != NeoSystem.Settings.Network)
                 {
                     ConsoleHelper.Warning("Network mismatch.");
@@ -515,7 +515,7 @@ namespace Neo.CLI
 
             var snapshot = NeoSystem.StoreView;
             Transaction tx;
-            AssetDescriptor descriptor = new(snapshot, NeoSystem.Settings, asset);
+            AssetDescriptor descriptor = new(snapshot, NeoSystem.Settings, asset, NeoSystem.NativeContractRepository);
             if (!BigDecimal.TryParse(amount, descriptor.Decimals, out BigDecimal decimalAmount) || decimalAmount.Sign <= 0)
             {
                 ConsoleHelper.Error("Incorrect Amount Format");
@@ -554,8 +554,8 @@ namespace Neo.CLI
 
             ConsoleHelper.Info(
                 "Send To: ", $"{to.ToAddress(NeoSystem.Settings.AddressVersion)}\n",
-                "Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}\t",
-                "Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+                "Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NeoSystem.NativeContractRepository.GAS.Decimals)}\t",
+                "Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NeoSystem.NativeContractRepository.GAS.Decimals)} GAS");
             if (!ConsoleHelper.ReadUserInput("Relay tx? (no|yes)").IsYes())
             {
                 return;
@@ -574,7 +574,7 @@ namespace Neo.CLI
         {
             if (NoWallet()) return;
 
-            TransactionState state = NativeContract.Ledger.GetTransactionState(NeoSystem.StoreView, txid);
+            TransactionState state = NeoSystem.NativeContractRepository.Ledger.GetTransactionState(NeoSystem.StoreView, txid);
             if (state != null)
             {
                 ConsoleHelper.Error("This tx is already confirmed, can't be cancelled.");
@@ -626,7 +626,7 @@ namespace Neo.CLI
             else
             {
                 var snapshot = NeoSystem.StoreView;
-                AssetDescriptor descriptor = new(snapshot, NeoSystem.Settings, NativeContract.GAS.Hash);
+                AssetDescriptor descriptor = new(snapshot, NeoSystem.Settings, NeoSystem.NativeContractRepository.GAS.Hash,NeoSystem.NativeContractRepository);
                 string extracFee = ConsoleHelper.ReadUserInput("This tx is not in mempool, please input extra fee (datoshi) manually");
                 if (!BigDecimal.TryParse(extracFee, descriptor.Decimals, out BigDecimal decimalExtraFee) || decimalExtraFee.Sign <= 0)
                 {
@@ -637,9 +637,9 @@ namespace Neo.CLI
             };
 
             ConsoleHelper.Info("Network fee: ",
-                $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)} GAS\t",
+                $"{new BigDecimal((BigInteger)tx.NetworkFee, NeoSystem.NativeContractRepository.GAS.Decimals)} GAS\t",
                 "Total fee: ",
-                $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+                $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NeoSystem.NativeContractRepository.GAS.Decimals)} GAS");
             if (!ConsoleHelper.ReadUserInput("Relay tx? (no|yes)").IsYes())
             {
                 return;
@@ -656,10 +656,10 @@ namespace Neo.CLI
             if (NoWallet()) return;
             BigInteger gas = BigInteger.Zero;
             var snapshot = NeoSystem.StoreView;
-            uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
+            uint height = NeoSystem.NativeContractRepository.Ledger.CurrentIndex(snapshot) + 1;
             foreach (UInt160 account in CurrentWallet!.GetAccounts().Select(p => p.ScriptHash))
-                gas += NativeContract.NEO.UnclaimedGas(snapshot, account, height);
-            ConsoleHelper.Info("Unclaimed gas: ", new BigDecimal(gas, NativeContract.GAS.Decimals).ToString());
+                gas += NeoSystem.NativeContractRepository.NEO.UnclaimedGas(snapshot, account, height);
+            ConsoleHelper.Info("Unclaimed gas: ", new BigDecimal(gas, NeoSystem.NativeContractRepository.GAS.Decimals).ToString());
         }
 
         /// <summary>
@@ -727,7 +727,7 @@ namespace Neo.CLI
             ContractParametersContext context;
             try
             {
-                context = new ContractParametersContext(snapshot, tx, NeoSystem.Settings.Network);
+                context = new ContractParametersContext(snapshot, tx, NeoSystem.Settings.Network, NeoSystem.NativeContractRepository);
             }
             catch (InvalidOperationException e)
             {

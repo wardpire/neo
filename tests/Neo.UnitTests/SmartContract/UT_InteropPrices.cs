@@ -25,7 +25,7 @@ namespace Neo.UnitTests.SmartContract
         {
             // System.Runtime.CheckWitness: f827ec8c (price is 200)
             byte[] SyscallSystemRuntimeCheckWitnessHash = new byte[] { 0x68, 0xf8, 0x27, 0xec, 0x8c };
-            using (ApplicationEngine ae = ApplicationEngine.Create(TriggerType.Application, null, null, gas: 0))
+            using (ApplicationEngine ae = ApplicationEngine.Create(TriggerType.Application, null, null, TestBlockchain.TheNeoSystem.NativeContractRepository, gas: 0))
             {
                 ae.LoadScript(SyscallSystemRuntimeCheckWitnessHash);
                 ApplicationEngine.System_Runtime_CheckWitness.FixedPrice.Should().Be(0_00001024L);
@@ -33,7 +33,7 @@ namespace Neo.UnitTests.SmartContract
 
             // System.Storage.GetContext: 9bf667ce (price is 1)
             byte[] SyscallSystemStorageGetContextHash = new byte[] { 0x68, 0x9b, 0xf6, 0x67, 0xce };
-            using (ApplicationEngine ae = ApplicationEngine.Create(TriggerType.Application, null, null, gas: 0))
+            using (ApplicationEngine ae = ApplicationEngine.Create(TriggerType.Application, null, null, TestBlockchain.TheNeoSystem.NativeContractRepository, gas: 0))
             {
                 ae.LoadScript(SyscallSystemStorageGetContextHash);
                 ApplicationEngine.System_Storage_GetContext.FixedPrice.Should().Be(0_00000016L);
@@ -41,7 +41,7 @@ namespace Neo.UnitTests.SmartContract
 
             // System.Storage.Get: 925de831 (price is 100)
             byte[] SyscallSystemStorageGetHash = new byte[] { 0x68, 0x92, 0x5d, 0xe8, 0x31 };
-            using (ApplicationEngine ae = ApplicationEngine.Create(TriggerType.Application, null, null, gas: 0))
+            using (ApplicationEngine ae = ApplicationEngine.Create(TriggerType.Application, null, null, TestBlockchain.TheNeoSystem.NativeContractRepository, gas: 0))
             {
                 ae.LoadScript(SyscallSystemStorageGetHash);
                 ApplicationEngine.System_Storage_Get.FixedPrice.Should().Be(32768L);
@@ -66,9 +66,9 @@ namespace Neo.UnitTests.SmartContract
 
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             snapshotCache.Add(skey, sItem);
-            snapshotCache.AddContract(script.ToScriptHash(), contractState);
+            snapshotCache.AddContract(script.ToScriptHash(), contractState, TestBlockchain.TheNeoSystem.NativeContractRepository);
 
-            using ApplicationEngine ae = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache);
+            using ApplicationEngine ae = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository);
             Debugger debugger = new(ae);
             ae.LoadScript(script);
             debugger.StepInto();
@@ -97,9 +97,9 @@ namespace Neo.UnitTests.SmartContract
 
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             snapshotCache.Add(skey, sItem);
-            snapshotCache.AddContract(script.ToScriptHash(), contractState);
+            snapshotCache.AddContract(script.ToScriptHash(), contractState, TestBlockchain.TheNeoSystem.NativeContractRepository);
 
-            using ApplicationEngine applicationEngine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache);
+            using ApplicationEngine applicationEngine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository);
             Debugger debugger = new(applicationEngine);
             applicationEngine.LoadScript(script);
             debugger.StepInto();
@@ -130,9 +130,9 @@ namespace Neo.UnitTests.SmartContract
 
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             snapshotCache.Add(skey, sItem);
-            snapshotCache.AddContract(script.ToScriptHash(), contractState);
+            snapshotCache.AddContract(script.ToScriptHash(), contractState, TestBlockchain.TheNeoSystem.NativeContractRepository);
 
-            using ApplicationEngine ae = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache);
+            using ApplicationEngine ae = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository);
             Debugger debugger = new(ae);
             ae.LoadScript(script);
             debugger.StepInto();
@@ -164,9 +164,9 @@ namespace Neo.UnitTests.SmartContract
 
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             snapshotCache.Add(skey, sItem);
-            snapshotCache.AddContract(script.ToScriptHash(), contractState);
+            snapshotCache.AddContract(script.ToScriptHash(), contractState, TestBlockchain.TheNeoSystem.NativeContractRepository);
 
-            using ApplicationEngine ae = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache);
+            using ApplicationEngine ae = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache, TestBlockchain.TheNeoSystem.NativeContractRepository);
             Debugger debugger = new(ae);
             ae.LoadScript(script);
             debugger.StepInto(); //push value

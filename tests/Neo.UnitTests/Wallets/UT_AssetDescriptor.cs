@@ -25,7 +25,7 @@ namespace Neo.UnitTests.Wallets
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
             Action action = () =>
             {
-                var descriptor = new Neo.Wallets.AssetDescriptor(snapshotCache, TestProtocolSettings.Default, UInt160.Parse("01ff00ff00ff00ff00ff00ff00ff00ff00ff00a4"));
+                var descriptor = new Neo.Wallets.AssetDescriptor(snapshotCache, TestProtocolSettings.Default, UInt160.Parse("01ff00ff00ff00ff00ff00ff00ff00ff00ff00a4"), TestBlockchain.TheNeoSystem.NativeContractRepository);
             };
             action.Should().Throw<ArgumentException>();
         }
@@ -34,8 +34,8 @@ namespace Neo.UnitTests.Wallets
         public void Check_GAS()
         {
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
-            var descriptor = new Neo.Wallets.AssetDescriptor(snapshotCache, TestProtocolSettings.Default, NativeContract.GAS.Hash);
-            descriptor.AssetId.Should().Be(NativeContract.GAS.Hash);
+            var descriptor = new Neo.Wallets.AssetDescriptor(snapshotCache, TestProtocolSettings.Default, TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Hash, TestBlockchain.TheNeoSystem.NativeContractRepository);
+            descriptor.AssetId.Should().Be(TestBlockchain.TheNeoSystem.NativeContractRepository.GAS.Hash);
             descriptor.AssetName.Should().Be(nameof(GasToken));
             descriptor.ToString().Should().Be(nameof(GasToken));
             descriptor.Symbol.Should().Be("GAS");
@@ -46,8 +46,8 @@ namespace Neo.UnitTests.Wallets
         public void Check_NEO()
         {
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
-            var descriptor = new Neo.Wallets.AssetDescriptor(snapshotCache, TestProtocolSettings.Default, NativeContract.NEO.Hash);
-            descriptor.AssetId.Should().Be(NativeContract.NEO.Hash);
+            var descriptor = new Neo.Wallets.AssetDescriptor(snapshotCache, TestProtocolSettings.Default, TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Hash, TestBlockchain.TheNeoSystem.NativeContractRepository);
+            descriptor.AssetId.Should().Be(TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Hash);
             descriptor.AssetName.Should().Be(nameof(NeoToken));
             descriptor.ToString().Should().Be(nameof(NeoToken));
             descriptor.Symbol.Should().Be("NEO");

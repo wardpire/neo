@@ -59,11 +59,11 @@ namespace Neo.Network.RPC
         /// <returns></returns>
         public async Task<decimal> GetUnclaimedGasAsync(UInt160 account)
         {
-            UInt160 scriptHash = NativeContract.NEO.Hash;
+            UInt160 scriptHash = rpcClient.NativeContractRepository.NEO.Hash;
             var blockCount = await rpcClient.GetBlockCountAsync().ConfigureAwait(false);
             var result = await nep17API.TestInvokeAsync(scriptHash, "unclaimedGas", account, blockCount - 1).ConfigureAwait(false);
             BigInteger balance = result.Stack.Single().GetInteger();
-            return ((decimal)balance) / (long)NativeContract.GAS.Factor;
+            return ((decimal)balance) / (long)rpcClient.NativeContractRepository.GAS.Factor;
         }
 
         /// <summary>
@@ -74,7 +74,7 @@ namespace Neo.Network.RPC
         /// <returns></returns>
         public async Task<uint> GetNeoBalanceAsync(string account)
         {
-            BigInteger balance = await GetTokenBalanceAsync(NativeContract.NEO.Hash.ToString(), account).ConfigureAwait(false);
+            BigInteger balance = await GetTokenBalanceAsync(rpcClient.NativeContractRepository.NEO.Hash.ToString(), account).ConfigureAwait(false);
             return (uint)balance;
         }
 
@@ -86,8 +86,8 @@ namespace Neo.Network.RPC
         /// <returns></returns>
         public async Task<decimal> GetGasBalanceAsync(string account)
         {
-            BigInteger balance = await GetTokenBalanceAsync(NativeContract.GAS.Hash.ToString(), account).ConfigureAwait(false);
-            return ((decimal)balance) / (long)NativeContract.GAS.Factor;
+            BigInteger balance = await GetTokenBalanceAsync(rpcClient.NativeContractRepository.GAS.Hash.ToString(), account).ConfigureAwait(false);
+            return ((decimal)balance) / (long)rpcClient.NativeContractRepository.GAS.Factor;
         }
 
         /// <summary>
@@ -128,8 +128,8 @@ namespace Neo.Network.RPC
         public async Task<Transaction> ClaimGasAsync(KeyPair keyPair, bool addAssert = true)
         {
             UInt160 toHash = Contract.CreateSignatureRedeemScript(keyPair.PublicKey).ToScriptHash();
-            BigInteger balance = await nep17API.BalanceOfAsync(NativeContract.NEO.Hash, toHash).ConfigureAwait(false);
-            Transaction transaction = await nep17API.CreateTransferTxAsync(NativeContract.NEO.Hash, keyPair, toHash, balance, null, addAssert).ConfigureAwait(false);
+            BigInteger balance = await nep17API.BalanceOfAsync(rpcClient.NativeContractRepository.NEO.Hash, toHash).ConfigureAwait(false);
+            Transaction transaction = await nep17API.CreateTransferTxAsync(rpcClient.NativeContractRepository.NEO.Hash, keyPair, toHash, balance, null, addAssert).ConfigureAwait(false);
             await rpcClient.SendRawTransactionAsync(transaction).ConfigureAwait(false);
             return transaction;
         }

@@ -41,11 +41,11 @@ namespace Neo.UnitTests.Extensions
         [TestMethod]
         public void TestGetStorage()
         {
-            var contractStorage = NativeContract.ContractManagement.FindContractStorage(system.StoreView, NativeContract.NEO.Id);
+            var contractStorage = TestBlockchain.TheNeoSystem.NativeContractRepository.ContractManagement.FindContractStorage(system.StoreView, TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Id);
 
             Assert.IsNotNull(contractStorage);
 
-            var neoContract = NativeContract.ContractManagement.GetContractById(system.StoreView, NativeContract.NEO.Id);
+            var neoContract = TestBlockchain.TheNeoSystem.NativeContractRepository.ContractManagement.GetContractById(system.StoreView, TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.Id);
 
             contractStorage = neoContract.FindStorage(system.StoreView);
 

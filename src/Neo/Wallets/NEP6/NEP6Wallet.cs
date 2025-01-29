@@ -12,6 +12,7 @@
 using Neo.Extensions;
 using Neo.Json;
 using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -55,7 +56,7 @@ namespace Neo.Wallets.NEP6
         /// <param name="password">The password of the wallet.</param>
         /// <param name="settings">The <see cref="ProtocolSettings"/> to be used by the wallet.</param>
         /// <param name="name">The name of the wallet. If the wallet is loaded from an existing file, this parameter is ignored.</param>
-        public NEP6Wallet(string path, string password, ProtocolSettings settings, string name = null) : base(path, settings)
+        public NEP6Wallet(string path, string password, ProtocolSettings settings, NativeContractRepository nativeContractRepository, string name = null) : base(path, settings, nativeContractRepository)
         {
             this.password = password.ToSecureString();
             if (File.Exists(path))
@@ -80,7 +81,7 @@ namespace Neo.Wallets.NEP6
         /// <param name="password">The password of the wallet.</param>
         /// <param name="settings">The <see cref="ProtocolSettings"/> to be used by the wallet.</param>
         /// <param name="json">The JSON object representing the wallet.</param>
-        public NEP6Wallet(string path, string password, ProtocolSettings settings, JObject json) : base(path, settings)
+        public NEP6Wallet(string path, string password, ProtocolSettings settings, JObject json, NativeContractRepository nativeContractRepository) : base(path, settings, nativeContractRepository)
         {
             this.password = password.ToSecureString();
             LoadFromJson(json, out Scrypt, out accounts, out extra);

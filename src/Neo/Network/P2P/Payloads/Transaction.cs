@@ -295,7 +295,7 @@ namespace Neo.Network.P2P.Payloads
             return Hash.GetHashCode();
         }
 
-        public UInt160[] GetScriptHashesForVerifying(DataCache snapshot)
+        public UInt160[] GetScriptHashesForVerifying(DataCache snapshot, NativeContractRepository nativeContractRepository)
         {
             return Signers.Select(p => p.Account).ToArray();
         }
@@ -349,11 +349,11 @@ namespace Neo.Network.P2P.Payloads
         /// <param name="context">The <see cref="TransactionVerificationContext"/> used to verify the transaction.</param>
         /// <param name="conflictsList">The list of conflicting <see cref="Transaction"/> those fee should be excluded from sender's overall fee during <see cref="TransactionVerificationContext"/>-based verification in case of sender's match.</param>
         /// <returns>The result of the verification.</returns>
-        public VerifyResult Verify(ProtocolSettings settings, DataCache snapshot, TransactionVerificationContext context, IEnumerable<Transaction> conflictsList)
+        public VerifyResult Verify(ProtocolSettings settings, DataCache snapshot, TransactionVerificationContext context, NativeContractRepository nativeContractRepository, IEnumerable<Transaction> conflictsList)
         {
-            VerifyResult result = VerifyStateIndependent(settings);
+            VerifyResult result = VerifyStateIndependent(settings, nativeContractRepository);
             if (result != VerifyResult.Succeed) return result;
-            return VerifyStateDependent(settings, snapshot, context, conflictsList);
+            return VerifyStateDependent(settings, snapshot, context, nativeContractRepository, conflictsList);
         }
 
         /// <summary>
@@ -364,27 +364,27 @@ namespace Neo.Network.P2P.Payloads
         /// <param name="context">The <see cref="TransactionVerificationContext"/> used to verify the transaction.</param>
         /// <param name="conflictsList">The list of conflicting <see cref="Transaction"/> those fee should be excluded from sender's overall fee during <see cref="TransactionVerificationContext"/>-based verification in case of sender's match.</param>
         /// <returns>The result of the verification.</returns>
-        public virtual VerifyResult VerifyStateDependent(ProtocolSettings settings, DataCache snapshot, TransactionVerificationContext context, IEnumerable<Transaction> conflictsList)
+        public virtual VerifyResult VerifyStateDependent(ProtocolSettings settings, DataCache snapshot, TransactionVerificationContext context, NativeContractRepository nativeContractRepository, IEnumerable<Transaction> conflictsList)
         {
-            uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+            uint height = nativeContractRepository.Ledger.CurrentIndex(snapshot);
             if (ValidUntilBlock <= height || ValidUntilBlock > height + settings.MaxValidUntilBlockIncrement)
                 return VerifyResult.Expired;
-            UInt160[] hashes = GetScriptHashesForVerifying(snapshot);
+            UInt160[] hashes = GetScriptHashesForVerifying(snapshot, nativeContractRepository);
             foreach (UInt160 hash in hashes)
-                if (NativeContract.Policy.IsBlocked(snapshot, hash))
+                if (nativeContractRepository.Policy.IsBlocked(snapshot, hash))
                     return VerifyResult.PolicyFail;
-            if (!(context?.CheckTransaction(this, conflictsList, snapshot) ?? true)) return VerifyResult.InsufficientFunds;
+            if (!(context?.CheckTransaction(this, conflictsList, snapshot, nativeContractRepository) ?? true)) return VerifyResult.InsufficientFunds;
             long attributesFee = 0;
             foreach (TransactionAttribute attribute in Attributes)
-                if (!attribute.Verify(snapshot, this))
+                if (!attribute.Verify(snapshot, this, nativeContractRepository))
                     return VerifyResult.InvalidAttribute;
                 else
-                    attributesFee += attribute.CalculateNetworkFee(snapshot, this);
-            long netFeeDatoshi = NetworkFee - (Size * NativeContract.Policy.GetFeePerByte(snapshot)) - attributesFee;
+                    attributesFee += attribute.CalculateNetworkFee(snapshot, this, nativeContractRepository);
+            long netFeeDatoshi = NetworkFee - (Size * nativeContractRepository.Policy.GetFeePerByte(snapshot)) - attributesFee;
             if (netFeeDatoshi < 0) return VerifyResult.InsufficientFunds;
 
             if (netFeeDatoshi > MaxVerificationGas) netFeeDatoshi = MaxVerificationGas;
-            uint execFeeFactor = NativeContract.Policy.GetExecFeeFactor(snapshot);
+            uint execFeeFactor = nativeContractRepository.Policy.GetExecFeeFactor(snapshot);
             for (int i = 0; i < hashes.Length; i++)
             {
                 if (IsSignatureContract(witnesses[i].VerificationScript.Span))
@@ -395,7 +395,7 @@ namespace Neo.Network.P2P.Payloads
                 }
                 else
                 {
-                    if (!this.VerifyWitness(settings, snapshot, hashes[i], witnesses[i], netFeeDatoshi, out long fee))
+                    if (!this.VerifyWitness(settings, nativeContractRepository, snapshot, hashes[i], witnesses[i], netFeeDatoshi, out long fee))
                         return VerifyResult.Invalid;
                     netFeeDatoshi -= fee;
                 }
@@ -409,7 +409,7 @@ namespace Neo.Network.P2P.Payloads
         /// </summary>
         /// <param name="settings">The <see cref="ProtocolSettings"/> used to verify the transaction.</param>
         /// <returns>The result of the verification.</returns>
-        public virtual VerifyResult VerifyStateIndependent(ProtocolSettings settings)
+        public virtual VerifyResult VerifyStateIndependent(ProtocolSettings settings, NativeContractRepository nativeContractRepository)
         {
             if (Size > MaxTransactionSize) return VerifyResult.OverSize;
             try
@@ -420,7 +420,7 @@ namespace Neo.Network.P2P.Payloads
             {
                 return VerifyResult.InvalidScript;
             }
-            UInt160[] hashes = GetScriptHashesForVerifying(null);
+            UInt160[] hashes = GetScriptHashesForVerifying(null, nativeContractRepository);
             for (int i = 0; i < hashes.Length; i++)
             {
                 if (IsSignatureContract(witnesses[i].VerificationScript.Span))

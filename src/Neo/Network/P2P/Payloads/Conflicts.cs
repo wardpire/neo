@@ -48,17 +48,17 @@ namespace Neo.Network.P2P.Payloads
             return json;
         }
 
-        public override bool Verify(DataCache snapshot, Transaction tx)
+        public override bool Verify(DataCache snapshot, Transaction tx, NativeContractRepository nativeContractRepository)
         {
             // Only check if conflicting transaction is on chain. It's OK if the
             // conflicting transaction was in the Conflicts attribute of some other
             // on-chain transaction.
-            return !NativeContract.Ledger.ContainsTransaction(snapshot, Hash);
+            return !nativeContractRepository.Ledger.ContainsTransaction(snapshot, Hash);
         }
 
-        public override long CalculateNetworkFee(DataCache snapshot, Transaction tx)
+        public override long CalculateNetworkFee(DataCache snapshot, Transaction tx, NativeContractRepository nativeContractRepository)
         {
-            return tx.Signers.Length * base.CalculateNetworkFee(snapshot, tx);
+            return tx.Signers.Length * base.CalculateNetworkFee(snapshot, tx, nativeContractRepository);
         }
     }
 }

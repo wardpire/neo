@@ -66,9 +66,9 @@ namespace Neo.Plugins.OracleService.Tests
         {
             var snapshotCache = TestBlockchain.GetTestSnapshotCache();
 
-            var executionFactor = NativeContract.Policy.GetExecFeeFactor(snapshotCache);
+            var executionFactor = TestBlockchain.s_theNeoSystem.NativeContractRepository.Policy.GetExecFeeFactor(snapshotCache);
             Assert.AreEqual(executionFactor, (uint)30);
-            var feePerByte = NativeContract.Policy.GetFeePerByte(snapshotCache);
+            var feePerByte = TestBlockchain.s_theNeoSystem.NativeContractRepository.Policy.GetFeePerByte(snapshotCache);
             Assert.AreEqual(feePerByte, 1000);
 
             OracleRequest request = new OracleRequest
@@ -82,7 +82,7 @@ namespace Neo.Plugins.OracleService.Tests
                 UserData = []
             };
             byte Prefix_Transaction = 11;
-            snapshotCache.Add(NativeContract.Ledger.CreateStorageKey(Prefix_Transaction, request.OriginalTxid), new StorageItem(new TransactionState()
+            snapshotCache.Add(TestBlockchain.s_theNeoSystem.NativeContractRepository.Ledger.CreateStorageKey(Prefix_Transaction, request.OriginalTxid), new StorageItem(new TransactionState()
             {
                 BlockIndex = 1,
                 Transaction = new Transaction()
@@ -92,7 +92,7 @@ namespace Neo.Plugins.OracleService.Tests
             }));
             OracleResponse response = new OracleResponse() { Id = 1, Code = OracleResponseCode.Success, Result = new byte[] { 0x00 } };
             ECPoint[] oracleNodes = new ECPoint[] { ECCurve.Secp256r1.G };
-            var tx = OracleService.CreateResponseTx(snapshotCache, request, response, oracleNodes, ProtocolSettings.Default);
+            var tx = OracleService.CreateResponseTx(snapshotCache, request, response, oracleNodes, ProtocolSettings.Default, TestBlockchain.s_theNeoSystem.NativeContractRepository);
 
             Assert.AreEqual(166, tx.Size);
             Assert.AreEqual(2198650, tx.NetworkFee);
@@ -102,7 +102,7 @@ namespace Neo.Plugins.OracleService.Tests
 
             request.GasForResponse = 0_10000000;
             response.Result = new byte[10250];
-            tx = OracleService.CreateResponseTx(snapshotCache, request, response, oracleNodes, ProtocolSettings.Default);
+            tx = OracleService.CreateResponseTx(snapshotCache, request, response, oracleNodes, ProtocolSettings.Default, TestBlockchain.s_theNeoSystem.NativeContractRepository);
             Assert.AreEqual(165, tx.Size);
             Assert.AreEqual(OracleResponseCode.InsufficientFunds, response.Code);
             Assert.AreEqual(2197650, tx.NetworkFee);

@@ -80,7 +80,7 @@ namespace Neo.UnitTests.Plugins
             return GetConfiguration();
         }
 
-        protected override bool OnMessage(object message) => true;
+        public override bool OnMessage(object message) => true;
 
         private void OnCommitting(NeoSystem system, Block block, DataCache snapshot, IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
         {

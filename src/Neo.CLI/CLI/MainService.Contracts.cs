@@ -46,9 +46,9 @@ namespace Neo.CLI
             UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
 
             ConsoleHelper.Info("Contract hash: ", $"{hash}");
-            ConsoleHelper.Info("Gas consumed: ", $"{new BigDecimal((BigInteger)tx.SystemFee, NativeContract.GAS.Decimals)} GAS");
-            ConsoleHelper.Info("Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)} GAS");
-            ConsoleHelper.Info("Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+            ConsoleHelper.Info("Gas consumed: ", $"{new BigDecimal((BigInteger)tx.SystemFee, NeoSystem.NativeContractRepository.GAS.Decimals)} GAS");
+            ConsoleHelper.Info("Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NeoSystem.NativeContractRepository.GAS.Decimals)} GAS");
+            ConsoleHelper.Info("Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NeoSystem.NativeContractRepository.GAS.Decimals)} GAS");
             if (!ConsoleHelper.ReadUserInput("Relay tx? (no|yes)").IsYes()) // Add this in case just want to get hash but not relay
             {
                 return;
@@ -99,7 +99,7 @@ namespace Neo.CLI
                 ConsoleHelper.Error(GetExceptionMessage(e));
                 return;
             }
-            ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, scriptHash);
+            ContractState contract = NeoSystem.NativeContractRepository.ContractManagement.GetContract(NeoSystem.StoreView, scriptHash);
             if (contract == null)
             {
                 ConsoleHelper.Warning($"Can't upgrade, contract hash not exist: {scriptHash}");
@@ -108,9 +108,9 @@ namespace Neo.CLI
             {
                 ConsoleHelper.Info("Contract hash: ", $"{scriptHash}");
                 ConsoleHelper.Info("Updated times: ", $"{contract.UpdateCounter}");
-                ConsoleHelper.Info("Gas consumed: ", $"{new BigDecimal((BigInteger)tx.SystemFee, NativeContract.GAS.Decimals)} GAS");
-                ConsoleHelper.Info("Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)} GAS");
-                ConsoleHelper.Info("Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+                ConsoleHelper.Info("Gas consumed: ", $"{new BigDecimal((BigInteger)tx.SystemFee, NeoSystem.NativeContractRepository.GAS.Decimals)} GAS");
+                ConsoleHelper.Info("Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NeoSystem.NativeContractRepository.GAS.Decimals)} GAS");
+                ConsoleHelper.Info("Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NeoSystem.NativeContractRepository.GAS.Decimals)} GAS");
                 if (!ConsoleHelper.ReadUserInput("Relay tx? (no|yes)").IsYes()) // Add this in case just want to get hash but not relay
                 {
                     return;
@@ -132,7 +132,7 @@ namespace Neo.CLI
         private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray? contractParameters = null, UInt160? sender = null, UInt160[]? signerAccounts = null, decimal maxGas = 20)
         {
             // In the unit of datoshi, 1 datoshi = 1e-8 GAS
-            var datoshi = new BigDecimal(maxGas, NativeContract.GAS.Decimals);
+            var datoshi = new BigDecimal(maxGas, NeoSystem.NativeContractRepository.GAS.Decimals);
             Signer[] signers = Array.Empty<Signer>();
             if (!NoWallet())
             {
@@ -177,9 +177,9 @@ namespace Neo.CLI
                 return;
             }
             ConsoleHelper.Info("Network fee: ",
-                $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)} GAS\t",
+                $"{new BigDecimal((BigInteger)tx.NetworkFee, NeoSystem.NativeContractRepository.GAS.Decimals)} GAS\t",
                 "Total fee: ",
-                $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+                $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NeoSystem.NativeContractRepository.GAS.Decimals)} GAS");
             if (!ConsoleHelper.ReadUserInput("Relay tx? (no|yes)").IsYes())
             {
                 return;

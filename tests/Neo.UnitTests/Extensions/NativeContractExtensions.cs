@@ -34,13 +34,13 @@ namespace Neo.UnitTests.Extensions
         /// <param name="datoshi">The gas fee to spend for deploying the contract in the unit of datoshi, 1 datoshi = 1e-8 GAS.</param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public static ContractState DeployContract(this DataCache snapshot, UInt160 sender, byte[] nefFile, byte[] manifest, long datoshi = 200_00000000)
+        public static ContractState DeployContract(this DataCache snapshot, UInt160 sender, byte[] nefFile, byte[] manifest, NativeContractRepository nativeContractRepository, long datoshi = 200_00000000)
         {
             var script = new ScriptBuilder();
-            script.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", nefFile, manifest, null);
+            script.EmitDynamicCall(nativeContractRepository.ContractManagement.Hash, "deploy", nefFile, manifest, null);
 
             var engine = ApplicationEngine.Create(TriggerType.Application,
-                sender != null ? new Transaction() { Signers = new Signer[] { new Signer() { Account = sender } }, Attributes = System.Array.Empty<TransactionAttribute>() } : null, snapshot, settings: TestBlockchain.TheNeoSystem.Settings, gas: datoshi);
+                sender != null ? new Transaction() { Signers = new Signer[] { new Signer() { Account = sender } }, Attributes = System.Array.Empty<TransactionAttribute>() } : null, snapshot, nativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings, gas: datoshi);
             engine.LoadScript(script.ToArray());
 
             if (engine.Execute() != VMState.HALT)
@@ -55,12 +55,12 @@ namespace Neo.UnitTests.Extensions
             return ret;
         }
 
-        public static void UpdateContract(this DataCache snapshot, UInt160 callingScriptHash, byte[] nefFile, byte[] manifest)
+        public static void UpdateContract(this DataCache snapshot, UInt160 callingScriptHash, byte[] nefFile, byte[] manifest, NativeContractRepository nativeContractRepository)
         {
             var script = new ScriptBuilder();
-            script.EmitDynamicCall(NativeContract.ContractManagement.Hash, "update", nefFile, manifest, null);
+            script.EmitDynamicCall(nativeContractRepository.ContractManagement.Hash, "update", nefFile, manifest, null);
 
-            var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, settings: TestBlockchain.TheNeoSystem.Settings);
+            var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, nativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings);
             engine.LoadScript(script.ToArray());
 
             // Fake calling script hash
@@ -78,12 +78,12 @@ namespace Neo.UnitTests.Extensions
             }
         }
 
-        public static void DestroyContract(this DataCache snapshot, UInt160 callingScriptHash)
+        public static void DestroyContract(this DataCache snapshot, UInt160 callingScriptHash, NativeContractRepository nativeContractRepository)
         {
             var script = new ScriptBuilder();
-            script.EmitDynamicCall(NativeContract.ContractManagement.Hash, "destroy");
+            script.EmitDynamicCall(nativeContractRepository.ContractManagement.Hash, "destroy");
 
-            var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, settings: TestBlockchain.TheNeoSystem.Settings);
+            var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, nativeContractRepository, settings: TestBlockchain.TheNeoSystem.Settings);
             engine.LoadScript(script.ToArray());
 
             // Fake calling script hash
@@ -101,38 +101,38 @@ namespace Neo.UnitTests.Extensions
             }
         }
 
-        public static void AddContract(this DataCache snapshot, UInt160 hash, ContractState state)
+        public static void AddContract(this DataCache snapshot, UInt160 hash, ContractState state, NativeContractRepository nativeContractRepository)
         {
             //key: hash, value: ContractState
-            var key = new KeyBuilder(NativeContract.ContractManagement.Id, 8).Add(hash);
+            var key = new KeyBuilder(nativeContractRepository.ContractManagement.Id, 8).Add(hash);
             snapshot.Add(key, new StorageItem(state));
             //key: id, value: hash
-            var key2 = new KeyBuilder(NativeContract.ContractManagement.Id, 12).AddBigEndian(state.Id);
+            var key2 = new KeyBuilder(nativeContractRepository.ContractManagement.Id, 12).AddBigEndian(state.Id);
             if (!snapshot.Contains(key2)) snapshot.Add(key2, new StorageItem(hash.ToArray()));
         }
 
-        public static void DeleteContract(this DataCache snapshot, UInt160 hash)
+        public static void DeleteContract(this DataCache snapshot, UInt160 hash, NativeContractRepository nativeContractRepository)
         {
             //key: hash, value: ContractState
-            var key = new KeyBuilder(NativeContract.ContractManagement.Id, 8).Add(hash);
+            var key = new KeyBuilder(nativeContractRepository.ContractManagement.Id, 8).Add(hash);
             var value = snapshot.TryGet(key)?.GetInteroperable<ContractState>();
             snapshot.Delete(key);
             if (value != null)
             {
                 //key: id, value: hash
-                var key2 = new KeyBuilder(NativeContract.ContractManagement.Id, 12).AddBigEndian(value.Id);
+                var key2 = new KeyBuilder(nativeContractRepository.ContractManagement.Id, 12).AddBigEndian(value.Id);
                 snapshot.Delete(key2);
             }
         }
 
-        public static StackItem Call(this NativeContract contract, DataCache snapshot, string method, params ContractParameter[] args)
+        public static StackItem Call(this INativeContract contract, DataCache snapshot, string method, NativeContractRepository nativeContractRepository, params ContractParameter[] args)
         {
-            return Call(contract, snapshot, null, null, method, args);
+            return Call(contract, snapshot, null, null, method, nativeContractRepository, args);
         }
 
-        public static StackItem Call(this NativeContract contract, DataCache snapshot, IVerifiable container, Block persistingBlock, string method, params ContractParameter[] args)
+        public static StackItem Call(this INativeContract contract, DataCache snapshot, IVerifiable container, Block persistingBlock, string method, NativeContractRepository nativeContractRepository, params ContractParameter[] args)
         {
-            using var engine = ApplicationEngine.Create(TriggerType.Application, container, snapshot, persistingBlock, settings: TestBlockchain.TheNeoSystem.Settings);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, container, snapshot, nativeContractRepository, persistingBlock, settings: TestBlockchain.TheNeoSystem.Settings);
             using var script = new ScriptBuilder();
             script.EmitDynamicCall(contract.Hash, method, args);
             engine.LoadScript(script.ToArray());

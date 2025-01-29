@@ -19,7 +19,6 @@ namespace Neo.Plugins.Storage
 
         public RocksDBStore()
         {
-            StoreFactory.RegisterProvider(this);
         }
 
         /// <summary>

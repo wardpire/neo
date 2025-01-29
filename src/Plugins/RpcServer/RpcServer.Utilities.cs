@@ -20,7 +20,7 @@ namespace Neo.Plugins.RpcServer
         [RpcMethod]
         protected internal virtual JToken ListPlugins(JArray _params)
         {
-            return new JArray(Plugin.Plugins
+            return new JArray(system.PluginRepository.Plugins
                 .OrderBy(u => u.Name)
                 .Select(u => new JObject
                 {

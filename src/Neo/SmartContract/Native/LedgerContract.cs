@@ -35,7 +35,7 @@ namespace Neo.SmartContract.Native
 
         private readonly StorageKey _currentBlock;
 
-        internal LedgerContract() : base()
+        internal LedgerContract(NativeContractRepository nativeContractRepository) : base(nativeContractRepository)
         {
             _currentBlock = CreateStorageKey(Prefix_CurrentBlock);
         }

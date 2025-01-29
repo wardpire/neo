@@ -64,7 +64,7 @@ namespace Neo.GUI
             if (string.IsNullOrEmpty(input)) return;
             try
             {
-                context = ContractParametersContext.Parse(input, Service.NeoSystem.StoreView);
+                context = ContractParametersContext.Parse(input, Service.NeoSystem.StoreView, Service.NeoSystem.NativeContractRepository);
             }
             catch (FormatException ex)
             {

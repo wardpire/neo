@@ -9,9 +9,11 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using LevelDB;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Neo.IO.Storage.LevelDB;
 using Neo.Persistence;
+using RocksDbSharp;
 using System.IO;
 using System.Linq;
 
@@ -76,15 +78,19 @@ namespace Neo.Plugins.Storage.Tests
         [TestMethod]
         public void TestLevelDbDatabase()
         {
-            using var db = DB.Open(Path.GetRandomFileName(), new() { CreateIfMissing = true });
+            using var db = new DB(new() { CreateIfMissing = true }, Path.GetRandomFileName());
 
-            db.Put(WriteOptions.Default, [0x00, 0x00, 0x01], [0x01]);
-            db.Put(WriteOptions.Default, [0x00, 0x00, 0x02], [0x02]);
-            db.Put(WriteOptions.Default, [0x00, 0x00, 0x03], [0x03]);
+            var wo = new LevelDB.WriteOptions();
 
-            CollectionAssert.AreEqual(new byte[] { 0x01, }, db.Get(ReadOptions.Default, [0x00, 0x00, 0x01]));
-            CollectionAssert.AreEqual(new byte[] { 0x02, }, db.Get(ReadOptions.Default, [0x00, 0x00, 0x02]));
-            CollectionAssert.AreEqual(new byte[] { 0x03, }, db.Get(ReadOptions.Default, [0x00, 0x00, 0x03]));
+            db.Put([0x00, 0x00, 0x01], [0x01], wo);
+            db.Put([0x00, 0x00, 0x02], [0x02], wo);
+            db.Put([0x00, 0x00, 0x03], [0x03], wo);
+
+            var ro = new LevelDB.ReadOptions();
+
+            CollectionAssert.AreEqual(new byte[] { 0x01, }, db.Get([0x00, 0x00, 0x01], ro));
+            CollectionAssert.AreEqual(new byte[] { 0x02, }, db.Get([0x00, 0x00, 0x02], ro));
+            CollectionAssert.AreEqual(new byte[] { 0x03, }, db.Get([0x00, 0x00, 0x03], ro));
         }
 
         [TestMethod]
