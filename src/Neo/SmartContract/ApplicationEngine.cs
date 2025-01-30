@@ -185,8 +185,8 @@ namespace Neo.SmartContract
             ProtocolSettings settings, long gas, IDiagnostic diagnostic, NativeContractRepository nativeContractRepository, JumpTable jumpTable = null)
             : base(jumpTable ?? DefaultJumpTable)
         {
+            NativeContractRepository = nativeContractRepository;
             persistingBlock ??= CreateDummyBlock(snapshotCache, settings ?? ProtocolSettings.Default);
-            this.NativeContractRepository = nativeContractRepository;
             Trigger = trigger;
             ScriptContainer = container;
             originalSnapshotCache = snapshotCache;

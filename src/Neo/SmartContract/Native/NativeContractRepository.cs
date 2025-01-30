@@ -30,7 +30,15 @@ namespace Neo.SmartContract.Native
 
         public NativeContractRepository()
         {
+            new ContractManagement(this);
+            new StdLib(this);
+            new CryptoLib(this);
+            new LedgerContract(this);
+            new NeoToken(this);
+            new GasToken(this);
             new PolicyContract(this);
+            new RoleManagement(this);
+            new OracleContract(this);
         }
 
         public int RegisterContract(UInt160 hash, NativeContract contract)
