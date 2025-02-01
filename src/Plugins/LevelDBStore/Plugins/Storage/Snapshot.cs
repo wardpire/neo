@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2024 The Neo Project.
+// Copyright (C) 2015-2025 The Neo Project.
 //
 // Snapshot.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -14,11 +14,13 @@ using Neo.Persistence;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Neo.Plugins.Storage
 {
     /// <summary>
     /// <code>Iterating over the whole dataset can be time-consuming. Depending upon how large the dataset is.</code>
+    /// <remarks>On-chain write operations on a snapshot cannot be concurrent.</remarks>
     /// </summary>
     internal class Snapshot : ISnapshot, IEnumerable<KeyValuePair<byte[], byte[]>>
     {
@@ -33,12 +35,14 @@ namespace Neo.Plugins.Storage
             _batch = new LevelDB.WriteBatch();
         }
 
+        /// <inheritdoc/>
         public void Commit()
         {
             _db.Write(_batch);
             _batch.Clear();
         }
 
+        /// <inheritdoc/>
         public void Delete(byte[] key)
         {
             _batch.Delete(key);
@@ -51,7 +55,7 @@ namespace Neo.Plugins.Storage
         }
 
         /// <inheritdoc/>
-        public IEnumerable<(byte[] Key, byte[] Value)> Seek(byte[] keyOrPrefix, SeekDirection direction = SeekDirection.Forward)
+        public IEnumerable<(byte[] Key, byte[] Value)> Seek(byte[]? keyOrPrefix, SeekDirection direction = SeekDirection.Forward)
         {
             var it = _db.CreateIterator(new LevelDB.ReadOptions() { Snapshot = _snapShot });
             if (direction == SeekDirection.Forward)
@@ -84,12 +88,12 @@ namespace Neo.Plugins.Storage
             return val != null && val.Length > 0;
         }
 
-        public byte[] TryGet(byte[] key)
+        public byte[]? TryGet(byte[] key)
         {
             return _db.Get(key, new LevelDB.ReadOptions() { Snapshot = _snapShot });
         }
 
-        public bool TryGet(byte[] key, out byte[] value)
+        public bool TryGet(byte[] key, [NotNullWhen(true)] out byte[]? value)
         {
             value = _db.Get(key, new ReadOptions() { Snapshot = _snapShot });
             return value != null;

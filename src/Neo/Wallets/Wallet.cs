@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2024 The Neo Project.
+// Copyright (C) 2015-2025 The Neo Project.
 //
 // Wallet.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -586,7 +586,7 @@ namespace Neo.Wallets
                     tx.SystemFee = engine.FeeConsumed;
                 }
 
-                tx.NetworkFee = tx.CalculateNetworkFee(snapshot, ProtocolSettings, _nativeContractRepository, (a) => GetAccount(a)?.Contract?.Script, maxGas);
+                tx.NetworkFee = tx.CalculateNetworkFee(snapshot, ProtocolSettings, _nativeContractRepository, this, maxGas);
                 if (value >= tx.SystemFee + tx.NetworkFee) return tx;
             }
             throw new InvalidOperationException("Insufficient GAS");

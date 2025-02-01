@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2024 The Neo Project.
+// Copyright (C) 2015-2025 The Neo Project.
 //
 // Helper.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -17,7 +17,6 @@ using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
 using System;
-using System.Buffers.Binary;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -51,8 +50,12 @@ namespace Neo.Cryptography
         /// <returns>The computed hash code.</returns>
         public static byte[] RIPEMD160(this ReadOnlySpan<byte> value)
         {
-            byte[] source = value.ToArray();
-            return source.RIPEMD160();
+            using var ripemd160 = new RIPEMD160Managed();
+
+            var output = new byte[ripemd160.HashSize / 8];
+            if (!ripemd160.TryComputeHash(value, output.AsSpan(), out _))
+                throw new CryptographicException();
+            return output;
         }
 
         /// <summary>
@@ -63,8 +66,7 @@ namespace Neo.Cryptography
         /// <returns>The computed hash code.</returns>
         public static uint Murmur32(this byte[] value, uint seed)
         {
-            using Murmur32 murmur = new(seed);
-            return BinaryPrimitives.ReadUInt32LittleEndian(murmur.ComputeHash(value));
+            return Neo.Cryptography.Murmur32.HashToUInt32(value, seed);
         }
 
         /// <summary>
@@ -75,10 +77,7 @@ namespace Neo.Cryptography
         /// <returns>The computed hash code.</returns>
         public static uint Murmur32(this ReadOnlySpan<byte> value, uint seed)
         {
-            Span<byte> buffer = stackalloc byte[sizeof(uint)];
-            using Murmur32 murmur = new(seed);
-            murmur.TryComputeHash(value, buffer, out _);
-            return BinaryPrimitives.ReadUInt32LittleEndian(buffer);
+            return Neo.Cryptography.Murmur32.HashToUInt32(value, seed);
         }
 
         /// <summary>

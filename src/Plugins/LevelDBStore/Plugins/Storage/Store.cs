@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2024 The Neo Project.
+// Copyright (C) 2015-2025 The Neo Project.
 //
 // Store.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -17,6 +17,7 @@ using Neo.Persistence;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Neo.Plugins.Storage
 {
@@ -93,7 +94,7 @@ namespace Neo.Plugins.Storage
             return _db.Get(key);
         }
 
-        public bool TryGet(byte[] key, out byte[] value)
+        public bool TryGet(byte[] key, [NotNullWhen(true)] out byte[]? value)
         {
             value = _db.Get(key);
             return value != null && value.Length > 0;
