@@ -9,7 +9,6 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
@@ -44,15 +43,15 @@ namespace Neo.UnitTests.SmartContract
             var snapshot = _snapshotCache.CloneCache();
 
             using var appEngine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, gas: 0, settings: TestBlockchain.TheNeoSystem.Settings);
-            (appEngine is TestEngine).Should().BeTrue();
+            Assert.IsTrue(appEngine is TestEngine);
         }
 
         [TestMethod]
         public void TestDefaultAppEngineProvider()
         {
             var snapshot = _snapshotCache.CloneCache();
-            using var appEngine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, new NativeContractRepository(), gas: 0, settings: TestBlockchain.TheNeoSystem.Settings);
-            (appEngine is ApplicationEngine).Should().BeTrue();
+            using var appEngine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, TestBlockchain.TheNeoSystem.NativeContractRepository, gas: 0, settings: TestBlockchain.TheNeoSystem.Settings);
+            Assert.IsTrue(appEngine is ApplicationEngine);
         }
 
         class TestProvider : IApplicationEngineProvider

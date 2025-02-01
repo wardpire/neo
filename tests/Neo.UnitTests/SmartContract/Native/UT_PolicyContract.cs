@@ -9,7 +9,6 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Neo.Extensions;
 using Neo.IO;
@@ -44,12 +43,12 @@ namespace Neo.UnitTests.SmartContract.Native
             var snapshot = _snapshotCache.CloneCache();
 
             var ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getFeePerByte", TestBlockchain.TheNeoSystem.NativeContractRepository);
-            ret.Should().BeOfType<VM.Types.Integer>();
-            ret.GetInteger().Should().Be(1000);
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Integer));
+            Assert.AreEqual(1000, ret.GetInteger());
 
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getAttributeFee", TestBlockchain.TheNeoSystem.NativeContractRepository, new ContractParameter(ContractParameterType.Integer) { Value = (BigInteger)(byte)TransactionAttributeType.Conflicts });
-            ret.Should().BeOfType<VM.Types.Integer>();
-            ret.GetInteger().Should().Be(PolicyContract.DefaultAttributeFee);
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Integer));
+            Assert.AreEqual(PolicyContract.DefaultAttributeFee, ret.GetInteger());
 
             Assert.ThrowsException<InvalidOperationException>(() => TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getAttributeFee", TestBlockchain.TheNeoSystem.NativeContractRepository, new ContractParameter(ContractParameterType.Integer) { Value = (BigInteger)byte.MaxValue }));
         }
@@ -79,8 +78,8 @@ namespace Neo.UnitTests.SmartContract.Native
             });
 
             var ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getAttributeFee", TestBlockchain.TheNeoSystem.NativeContractRepository, attr);
-            ret.Should().BeOfType<VM.Types.Integer>();
-            ret.GetInteger().Should().Be(0);
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Integer));
+            Assert.AreEqual(0, ret.GetInteger());
 
             // With signature, wrong value
             UInt160 committeeMultiSigAddr = TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.GetCommitteeAddress(snapshot);
@@ -91,26 +90,26 @@ namespace Neo.UnitTests.SmartContract.Native
             });
 
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getAttributeFee", TestBlockchain.TheNeoSystem.NativeContractRepository, attr);
-            ret.Should().BeOfType<VM.Types.Integer>();
-            ret.GetInteger().Should().Be(0);
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Integer));
+            Assert.AreEqual(0, ret.GetInteger());
 
             // Proper set
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, new Nep17NativeContractExtensions.ManualWitness(committeeMultiSigAddr), block,
                 "setAttributeFee", TestBlockchain.TheNeoSystem.NativeContractRepository, attr, new ContractParameter(ContractParameterType.Integer) { Value = 300300 });
-            ret.IsNull.Should().BeTrue();
+            Assert.IsTrue(ret.IsNull);
 
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getAttributeFee", TestBlockchain.TheNeoSystem.NativeContractRepository, attr);
-            ret.Should().BeOfType<VM.Types.Integer>();
-            ret.GetInteger().Should().Be(300300);
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Integer));
+            Assert.AreEqual(300300, ret.GetInteger());
 
             // Set to zero
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, new Nep17NativeContractExtensions.ManualWitness(committeeMultiSigAddr), block,
                 "setAttributeFee", TestBlockchain.TheNeoSystem.NativeContractRepository, attr, new ContractParameter(ContractParameterType.Integer) { Value = 0 });
-            ret.IsNull.Should().BeTrue();
+            Assert.IsTrue(ret.IsNull);
 
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getAttributeFee", TestBlockchain.TheNeoSystem.NativeContractRepository, attr);
-            ret.Should().BeOfType<VM.Types.Integer>();
-            ret.GetInteger().Should().Be(0);
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Integer));
+            Assert.AreEqual(0, ret.GetInteger());
         }
 
         [TestMethod]
@@ -138,18 +137,18 @@ namespace Neo.UnitTests.SmartContract.Native
             });
 
             var ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getFeePerByte", TestBlockchain.TheNeoSystem.NativeContractRepository);
-            ret.Should().BeOfType<VM.Types.Integer>();
-            ret.GetInteger().Should().Be(1000);
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Integer));
+            Assert.AreEqual(1000, ret.GetInteger());
 
             // With signature
             UInt160 committeeMultiSigAddr = TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.GetCommitteeAddress(snapshot);
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, new Nep17NativeContractExtensions.ManualWitness(committeeMultiSigAddr), block,
                 "setFeePerByte", TestBlockchain.TheNeoSystem.NativeContractRepository, new ContractParameter(ContractParameterType.Integer) { Value = 1 });
-            ret.IsNull.Should().BeTrue();
+            Assert.IsTrue(ret.IsNull);
 
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getFeePerByte", TestBlockchain.TheNeoSystem.NativeContractRepository);
-            ret.Should().BeOfType<VM.Types.Integer>();
-            ret.GetInteger().Should().Be(1);
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Integer));
+            Assert.AreEqual(1, ret.GetInteger());
         }
 
         [TestMethod]
@@ -177,8 +176,8 @@ namespace Neo.UnitTests.SmartContract.Native
             });
 
             var ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getExecFeeFactor", TestBlockchain.TheNeoSystem.NativeContractRepository);
-            ret.Should().BeOfType<VM.Types.Integer>();
-            ret.GetInteger().Should().Be(30);
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Integer));
+            Assert.AreEqual(30, ret.GetInteger());
 
             // With signature, wrong value
             UInt160 committeeMultiSigAddr = TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.GetCommitteeAddress(snapshot);
@@ -189,17 +188,17 @@ namespace Neo.UnitTests.SmartContract.Native
             });
 
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getExecFeeFactor", TestBlockchain.TheNeoSystem.NativeContractRepository);
-            ret.Should().BeOfType<VM.Types.Integer>();
-            ret.GetInteger().Should().Be(30);
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Integer));
+            Assert.AreEqual(30, ret.GetInteger());
 
             // Proper set
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, new Nep17NativeContractExtensions.ManualWitness(committeeMultiSigAddr), block,
                 "setExecFeeFactor", TestBlockchain.TheNeoSystem.NativeContractRepository, new ContractParameter(ContractParameterType.Integer) { Value = 50 });
-            ret.IsNull.Should().BeTrue();
+            Assert.IsTrue(ret.IsNull);
 
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getExecFeeFactor", TestBlockchain.TheNeoSystem.NativeContractRepository);
-            ret.Should().BeOfType<VM.Types.Integer>();
-            ret.GetInteger().Should().Be(50);
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Integer));
+            Assert.AreEqual(50, ret.GetInteger());
         }
 
         [TestMethod]
@@ -227,8 +226,8 @@ namespace Neo.UnitTests.SmartContract.Native
             });
 
             var ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getStoragePrice", TestBlockchain.TheNeoSystem.NativeContractRepository);
-            ret.Should().BeOfType<VM.Types.Integer>();
-            ret.GetInteger().Should().Be(100000);
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Integer));
+            Assert.AreEqual(100000, ret.GetInteger());
 
             // With signature, wrong value
             UInt160 committeeMultiSigAddr = TestBlockchain.TheNeoSystem.NativeContractRepository.NEO.GetCommitteeAddress(snapshot);
@@ -239,17 +238,17 @@ namespace Neo.UnitTests.SmartContract.Native
             });
 
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getStoragePrice", TestBlockchain.TheNeoSystem.NativeContractRepository);
-            ret.Should().BeOfType<VM.Types.Integer>();
-            ret.GetInteger().Should().Be(100000);
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Integer));
+            Assert.AreEqual(100000, ret.GetInteger());
 
             // Proper set
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, new Nep17NativeContractExtensions.ManualWitness(committeeMultiSigAddr), block,
                 "setStoragePrice", TestBlockchain.TheNeoSystem.NativeContractRepository, new ContractParameter(ContractParameterType.Integer) { Value = 300300 });
-            ret.IsNull.Should().BeTrue();
+            Assert.IsTrue(ret.IsNull);
 
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, "getStoragePrice", TestBlockchain.TheNeoSystem.NativeContractRepository);
-            ret.Should().BeOfType<VM.Types.Integer>();
-            ret.GetInteger().Should().Be(300300);
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Integer));
+            Assert.AreEqual(300300, ret.GetInteger());
         }
 
         [TestMethod]
@@ -283,29 +282,29 @@ namespace Neo.UnitTests.SmartContract.Native
             var ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, new Nep17NativeContractExtensions.ManualWitness(committeeMultiSigAddr), block,
               "blockAccount", TestBlockchain.TheNeoSystem.NativeContractRepository,
               new ContractParameter(ContractParameterType.ByteArray) { Value = UInt160.Parse("0xa400ff00ff00ff00ff00ff00ff00ff00ff00ff01").ToArray() });
-            ret.Should().BeOfType<VM.Types.Boolean>();
-            ret.GetBoolean().Should().BeTrue();
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Boolean));
+            Assert.IsTrue(ret.GetBoolean());
 
             // Same account
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, new Nep17NativeContractExtensions.ManualWitness(committeeMultiSigAddr), block,
                 "blockAccount", TestBlockchain.TheNeoSystem.NativeContractRepository,
                 new ContractParameter(ContractParameterType.ByteArray) { Value = UInt160.Parse("0xa400ff00ff00ff00ff00ff00ff00ff00ff00ff01").ToArray() });
-            ret.Should().BeOfType<VM.Types.Boolean>();
-            ret.GetBoolean().Should().BeFalse();
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Boolean));
+            Assert.IsFalse(ret.GetBoolean());
 
             // Account B
 
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, new Nep17NativeContractExtensions.ManualWitness(committeeMultiSigAddr), block,
                 "blockAccount", TestBlockchain.TheNeoSystem.NativeContractRepository,
                 new ContractParameter(ContractParameterType.ByteArray) { Value = UInt160.Parse("0xb400ff00ff00ff00ff00ff00ff00ff00ff00ff01").ToArray() });
-            ret.Should().BeOfType<VM.Types.Boolean>();
-            ret.GetBoolean().Should().BeTrue();
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Boolean));
+            Assert.IsTrue(ret.GetBoolean());
 
             // Check
 
-            TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.IsBlocked(snapshot, UInt160.Zero).Should().BeFalse();
-            TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.IsBlocked(snapshot, UInt160.Parse("0xa400ff00ff00ff00ff00ff00ff00ff00ff00ff01")).Should().BeTrue();
-            TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.IsBlocked(snapshot, UInt160.Parse("0xb400ff00ff00ff00ff00ff00ff00ff00ff00ff01")).Should().BeTrue();
+            Assert.IsFalse(TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.IsBlocked(snapshot, UInt160.Zero));
+            Assert.IsTrue(TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.IsBlocked(snapshot, UInt160.Parse("0xa400ff00ff00ff00ff00ff00ff00ff00ff00ff01")));
+            Assert.IsTrue(TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.IsBlocked(snapshot, UInt160.Parse("0xb400ff00ff00ff00ff00ff00ff00ff00ff00ff01")));
         }
 
         [TestMethod]
@@ -333,16 +332,16 @@ namespace Neo.UnitTests.SmartContract.Native
                 "blockAccount", TestBlockchain.TheNeoSystem.NativeContractRepository, new ContractParameter(ContractParameterType.Hash160) { Value = UInt160.Zero });
             });
 
-            TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.IsBlocked(snapshot, UInt160.Zero).Should().BeFalse();
+            Assert.IsFalse(TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.IsBlocked(snapshot, UInt160.Zero));
 
             // Block with signature
 
             var ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, new Nep17NativeContractExtensions.ManualWitness(committeeMultiSigAddr), block,
                 "blockAccount", TestBlockchain.TheNeoSystem.NativeContractRepository, new ContractParameter(ContractParameterType.Hash160) { Value = UInt160.Zero });
-            ret.Should().BeOfType<VM.Types.Boolean>();
-            ret.GetBoolean().Should().BeTrue();
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Boolean));
+            Assert.IsTrue(ret.GetBoolean());
 
-            TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.IsBlocked(snapshot, UInt160.Zero).Should().BeTrue();
+            Assert.IsTrue(TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.IsBlocked(snapshot, UInt160.Zero));
 
             // Unblock without signature
 
@@ -352,16 +351,16 @@ namespace Neo.UnitTests.SmartContract.Native
                 "unblockAccount", TestBlockchain.TheNeoSystem.NativeContractRepository, new ContractParameter(ContractParameterType.Hash160) { Value = UInt160.Zero });
             });
 
-            TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.IsBlocked(snapshot, UInt160.Zero).Should().BeTrue();
+            Assert.IsTrue(TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.IsBlocked(snapshot, UInt160.Zero));
 
             // Unblock with signature
 
             ret = TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.Call(snapshot, new Nep17NativeContractExtensions.ManualWitness(committeeMultiSigAddr), block,
                 "unblockAccount", TestBlockchain.TheNeoSystem.NativeContractRepository, new ContractParameter(ContractParameterType.Hash160) { Value = UInt160.Zero });
-            ret.Should().BeOfType<VM.Types.Boolean>();
-            ret.GetBoolean().Should().BeTrue();
+            Assert.IsInstanceOfType(ret, typeof(VM.Types.Boolean));
+            Assert.IsTrue(ret.GetBoolean());
 
-            TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.IsBlocked(snapshot, UInt160.Zero).Should().BeFalse();
+            Assert.IsFalse(TestBlockchain.TheNeoSystem.NativeContractRepository.Policy.IsBlocked(snapshot, UInt160.Zero));
         }
     }
 }
