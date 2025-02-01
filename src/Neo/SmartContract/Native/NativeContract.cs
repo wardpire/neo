@@ -293,6 +293,13 @@ namespace Neo.SmartContract.Native
             return new KeyBuilder(Id, prefix);
         }
 
+        internal Dictionary<int, ContractMethodMetadata> GetContractMethods(ApplicationEngine engine)
+        {
+            var nativeContracts = engine.GetState(() => new NativeContractsCache());
+            var currentAllowedMethods = nativeContracts.GetAllowedMethods(this, engine);
+            return currentAllowedMethods.Methods;
+        }
+
         internal async void Invoke(ApplicationEngine engine, byte version)
         {
             try
